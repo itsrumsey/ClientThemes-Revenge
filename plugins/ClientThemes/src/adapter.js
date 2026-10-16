@@ -2,15 +2,13 @@
 import { validId } from "./state.js";
 
 // Guarded Discord-private contracts; source evidence is in docs/AUDIT.md.
-export function createResolver({ metro, patcher, onCatalog = () => {} }) {
+export function createResolver({ metro, features, onCatalog = () => {} }) {
     return function resolve({ changed, selected, enabled }) {
-        const actions = metro.findByProps("updateBackgroundGradientPreset", "resetBackgroundGradientPreset");
+        features.refresh();
+        const actions = metro.findByProps("updateBackgroundGradientPreset");
         const store = metro.findByStoreName("ClientThemesBackgroundStore");
         const constants = metro.findByProps("BACKGROUND_GRADIENT_PRESETS_MAP");
         const utils = metro.findByProps("getLinearGradientForBackgroundGradient");
-        const selector = metro.findByProps("handleSaveTheme");
-        const premium = metro.findByProps("canUseClientThemes");
-        const sync = metro.findByProps("setShouldSyncAppearanceSettings");
         // No mutations or partial subscriptions before required contracts exist.
         const required = {
             updateBackgroundGradientPreset: typeof actions?.updateBackgroundGradientPreset === "function",
@@ -18,8 +16,7 @@ export function createResolver({ metro, patcher, onCatalog = () => {} }) {
             "ClientThemesBackgroundStore.addChangeListener": typeof store?.addChangeListener === "function",
             "ClientThemesBackgroundStore.removeChangeListener": typeof store?.removeChangeListener === "function",
             BACKGROUND_GRADIENT_PRESETS_MAP: !!constants?.BACKGROUND_GRADIENT_PRESETS_MAP,
-            getLinearGradientForBackgroundGradient: typeof utils?.getLinearGradientForBackgroundGradient === "function",
-            handleSaveTheme: typeof selector?.handleSaveTheme === "function"
+            getLinearGradientForBackgroundGradient: typeof utils?.getLinearGradientForBackgroundGradient === "function"
         };
         const missing = Object.keys(required).filter(key => !required[key]);
         if (missing.length) throw new Error(`Missing Discord theme contracts: ${missing.join(", ")}`);
@@ -28,17 +25,6 @@ export function createResolver({ metro, patcher, onCatalog = () => {} }) {
         let disposed = false;
         const supports = id => validId(id) && presets[id]?.id === id
             && Array.isArray(presets[id]?.colors) && presets[id].colors.length > 0;
-        const choice = args => {
-            const descriptor = args[0];
-            if (!descriptor || typeof descriptor !== "object") return;
-            if (supports(descriptor.id) && descriptor.type === presets[descriptor.id].type) {
-                selected(descriptor.id);
-            } else if (["light", "dark", "ash", "onyx", "system"].includes(descriptor.theme)
-                || descriptor.customThemeSettings != null) {
-                selected(null);
-            }
-            // Undefined return: spitroast.before must not replace arguments.
-        };
         const dispose = () => {
             if (disposed) return;
             disposed = true;
@@ -48,18 +34,6 @@ export function createResolver({ metro, patcher, onCatalog = () => {} }) {
         try {
             store.addChangeListener(changed);
             disposers.push(() => store.removeChangeListener(changed));
-            disposers.push(patcher.before("handleSaveTheme", selector, choice));
-            if (typeof selector.handleSaveSyncedModeTheme === "function") {
-                disposers.push(patcher.before("handleSaveSyncedModeTheme", selector, choice));
-            }
-            if (typeof premium?.canUseClientThemes === "function") {
-                disposers.push(patcher.instead("canUseClientThemes", premium, () => true));
-            }
-            if (typeof sync?.setShouldSyncAppearanceSettings === "function") {
-                disposers.push(patcher.instead("setShouldSyncAppearanceSettings", sync,
-                    (args, original) => enabled() && args[0] === true ? undefined : original(...args)));
-            }
-            // Never call the sync setter: it mutates persistent Discord preferences.
             onCatalog(Object.values(presets).filter(p => supports(p?.id)).map(p => {
                 let name;
                 try { name = p.getName?.(); } catch {}
@@ -83,11 +57,11 @@ export function createResolver({ metro, patcher, onCatalog = () => {} }) {
                     return { known: false, reason: `Live gradient read failed: ${String(error)}` };
                 }
             },
-            apply(id) { if (!disposed) return actions.updateBackgroundGradientPreset(id); },
+            apply(id) { if (!disposed) return features.withoutTracking(() => actions.updateBackgroundGradientPreset(id)); },
+            featureStatus: features.status,
+            refreshFeatures: features.refresh,
             dispose,
-            diagnostics: { contract: "legacy-vendetta/gradient-store", presets: Object.keys(presets).length,
-                pickerAccess: typeof premium?.canUseClientThemes === "function",
-                syncGuard: typeof sync?.setShouldSyncAppearanceSettings === "function" }
+            diagnostics: { contract: "legacy-vendetta/gradient-store", presets: Object.keys(presets).length }
         };
     };
 }

@@ -56,6 +56,12 @@ export function createController({ storage, resolve, lifecycle, log = () => {},
                 report("ready", candidate.diagnostics);
             }
             if (!running || !active) return;
+            session.refreshFeatures?.();
+            const featureState = session.featureStatus?.();
+            if (featureState && !featureState.ready) {
+                report("unlock-unavailable", featureState);
+                throw new Error(`Unlock functionality unavailable: ${featureState.missing.join(", ")}`);
+            }
             if (!selection.enabled) {
                 failures = 0; notBefore = 0;
                 report("following-discord");

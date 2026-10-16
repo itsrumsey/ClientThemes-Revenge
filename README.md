@@ -68,8 +68,18 @@ No GitHub Release is created by these workflows. Pages publishes only `index.js`
 
 The fork saves explicit theme choices separately from Discord's underlying appearance preference, restores after module readiness, checks live gradient state, and recovers after drift. It pauses verification in the background. Retries back off and suspend on persistent failure or a recovery loop. Reselect a supported preset or disable/reenable after inspecting logs to retry.
 
-Native light/dark/system choices and the custom color editor relinquish the gradient override. “Follow Discord appearance” in plugin settings also disables restoration without deleting the last preset. This plugin supports Discord's catalogued gradient presets; it does not implement a new custom color editor or replace Revenge JSON themes.
+Native light/dark/system choices and the custom color editor relinquish the gradient override. “Follow Discord appearance” in plugin settings also disables restoration without deleting the last preset. This plugin preserves the original local gradient unlock and supports Discord's gradient presets; it does not implement a new custom color editor or replace Revenge JSON themes.
 
 Look for `[ClientThemes 0.1.0]` logs. Missing modules, renamed/removed presets or unresolved tokens preserve the saved selection and report a suspended/unsupported state. Normal healthy verification is quiet. Live store confirmation cannot prove every screen's painted colors; device checks are still required.
 
-Updating at the same URL preserves state. Disabling removes timers, listeners and patches, but does not clear your selection or force a different Discord theme. Underlying appearance sync is never persistently changed by this fork; a temporary guard blocks enabling sync while an override is active. The original plugin may already have changed that preference.
+Updating at the same URL preserves state. Disabling removes timers, listeners and patches, but does not clear your selection or force a different Discord theme. For original-plugin feature parity, enabling this preview calls `setShouldSyncAppearanceSettings(false)` and suppresses subsequent sync setter calls while enabled, even with no saved preset. Disable the plugin to change appearance sync. On unload, a readable pre-plugin sync preference is restored; if that preference cannot be read, it is left unguessed and sync may remain off, as with the original plugin.
+
+## Gradient unlock regression and parity correction
+
+The user reports that the original plugin unlocks gradients on the target device while the earlier modernized preview does not. [The parity audit](docs/PARITY_REVIEW.md) documents the regression: new restoration prerequisites gated the original entitlement patch, the patch was treated as optional, and original experiment/sync/picker behavior had been removed or changed.
+
+The corrected preview installs the original `canUseClientThemes`, experiment and appearance-sync patches immediately on load, independently of AppState and recovery-only modules. Explicit native picker capture is also independent; if unavailable, the original pending-index/preset hooks provide a fallback. A missing gradient reader/catalog can suspend automatic restoration without disabling native gradient selection. Recovery's own writes are excluded from selection capture.
+
+Check the plugin settings' separate **Unlock** status and `[ClientThemes 0.1.0] unlock-ready` / `unlock-unavailable` diagnostics. Missing features include exact capability and lookup/patch errors. Matching gradient state is no longer reported healthy when required unlock/picker capabilities are missing. If recovery-only modules are unavailable, their separate retry/suspended diagnostics do not mean the installed unlock patches have been removed.
+
+Update at the same URL, keep the original disabled, restart Discord with updates enabled, and test whether the native picker now exposes selectable gradients before testing saved-theme restoration. Please report the Unlock status and missing capability names if it does not. Automated feature-parity tests are not confirmation of real-device success.

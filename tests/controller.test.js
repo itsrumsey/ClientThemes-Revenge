@@ -202,3 +202,13 @@ test('unload and background suppress confirmation work; late Promise rejection i
     g.control.start(); await g.clock.advance(0); g.control.stop(); finish(); await g.clock.advance(10000);
     assert.equal(g.clock.count(), 0); assert.equal(g.disposed, 1);
 });
+
+test('a matching restored gradient cannot report healthy when entitlement or picker is unavailable', async () => {
+    const f = fixture();
+    f.session.featureStatus = () => ({ ready: false, missing: ['entitlement'], capabilities: { entitlement: false } });
+    f.session.read = () => ({ known: true, matches: true });
+    f.control.start(); await f.clock.advance(120000);
+    assert.equal(f.calls, 0); assert.equal(f.control.inspect().status, 'suspended');
+    assert.ok(f.events.some(([event]) => event === 'unlock-unavailable'));
+    assert.equal(f.events.some(([event]) => event === 'healthy'), false); f.control.stop();
+});

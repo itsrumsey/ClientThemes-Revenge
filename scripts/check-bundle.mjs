@@ -41,8 +41,35 @@ life.change('active'); await clock.advance(1000);
 assert.equal(f.store.gradientPreset.id, 0);
 plugin.onUnload(); plugin.onUnload();
 assert.equal(f.patches, 0); assert.equal(f.listeners.size, 0); assert.equal(life.count(), 0); assert.equal(clock.count(), 0);
+// Native unlock/picker must survive failure of all additional restoration contracts.
+const degraded = fixture(), degradedClock = fakeClock(), unknownLife = lifecycle(null);
+const degradedStorage = {};
+delete degraded.modules[1].BACKGROUND_GRADIENT_PRESETS_MAP;
+delete degraded.modules[2].getLinearGradientForBackgroundGradient;
+delete degraded.modules[3].handleSaveTheme;
+degraded.store.getLinearGradient = undefined;
+degraded.metro.common = { React: {}, ReactNative: { AppState: {
+    get currentState() { return unknownLife.current(); },
+    addEventListener(_, cb) { return { remove: unknownLife.subscribe(cb) }; }
+} } };
+const degradedPlugin = runInNewContext(bytes.toString(), {
+    vendetta: { metro: degraded.metro, patcher: degraded.patcher, plugin: { storage: degradedStorage } },
+    console: { info() {}, error(...args) { throw Error(args.join(' ')); } },
+    Date: class extends Date { static now() { return degradedClock.now(); } },
+    setTimeout: degradedClock.set, clearTimeout: degradedClock.clear
+});
+degradedPlugin.onLoad();
+assert.equal(degraded.modules[4].canUseClientThemes(), true, 'Unlock must precede AppState/recovery readiness');
+assert.equal(degraded.experiments.getUserExperimentDescriptor('2023-02_client_themes_mobile').bucket, 1);
+await degradedClock.advance(100000);
+assert.equal(degraded.modules[4].canUseClientThemes(), true, 'Recovery failure must not remove unlock');
+degraded.modules[0].updateMobilePendingThemeIndex(2);
+degraded.modules[0].updateBackgroundGradientPreset(4);
+assert.equal(degradedStorage.selection.presetId, 4, 'Legacy picker must save selection without restoration contracts');
+degradedPlugin.onUnload();
+assert.equal(degraded.patches, 0); assert.equal(degradedClock.count(), 0); assert.equal(unknownLife.count(), 0);
 // Same input and lockfile must produce byte-identical artifacts on the same runner.
 execFileSync(process.execPath, ['build.mjs'], { stdio: 'inherit' });
 assert.deepEqual(await readFile(path + 'index.js'), bytes);
 assert.equal(JSON.parse(await readFile(path + 'manifest.json')).hash, manifest.hash);
-console.log('Bundle lifecycle, restoration, foreground recovery, cleanup, integrity and repeat-build checks passed.');
+console.log('Bundle unlock/picker independence, lifecycle, restoration, foreground recovery, cleanup, integrity and repeat-build checks passed.');
