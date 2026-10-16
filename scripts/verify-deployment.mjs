@@ -22,15 +22,16 @@ for (let attempt = 0; attempt < 12; attempt++) {
         const bytes = Buffer.from(await bundleResponse.arrayBuffer());
         const hash = createHash('sha256').update(bytes).digest('hex');
         assert.equal(manifest.main, 'index.js');
-        assert.equal(manifest.name, 'ClientThemes');
-        assert.ok(manifest.authors.some(a => a.name === 'sapphire'));
+        assert.equal(manifest.name, 'ClientThemes Revived');
+        assert.equal(manifest.description, 'Modernized ClientThemes for Revenge. Persistent theme selection, automatic startup restoration, and self-healing theme recovery.');
+        assert.ok(manifest.authors.some(a => a.name === 'sapphire' && a.id === '757982547861962752'));
         assert.ok(manifest.vendetta, 'Legacy polymanifest metadata');
         assert.equal(manifest.hash, hash, 'Deployed bundle must match public manifest');
         assert.equal(hash, expectedHash, 'CDN must serve this run, not an older deployment');
         assert.match(bytes.toString(), /GPL-3\.0/);
         assert.ok(bytes.length > 1000, 'Compiled bundle must not be an HTML error page');
         console.log(JSON.stringify({ installUrl: url.href, manifestStatus: 200, bundleStatus: 200,
-            bytes: bytes.length, sha256: hash, format: 'legacy-vendetta', publicAccess: true }));
+            name: manifest.name, description: manifest.description, bytes: bytes.length, sha256: hash, format: 'legacy-vendetta', publicAccess: true }));
         process.exit(0);
     } catch (error) {
         last = error;

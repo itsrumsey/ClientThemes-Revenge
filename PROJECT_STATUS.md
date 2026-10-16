@@ -8,7 +8,7 @@ Original authorship (sapphire / aeongdesu), m4fn3 attribution, and GPL-3.0 LICEN
 
 ## Modernization
 
-Implemented versioned persistent intent with legacy migration, onLoad readiness discovery, bounded retries/backoff, live preset and resolved-gradient verification, Flux-change and foreground recovery, background pausing, rolling recovery limits, cleanup, explicit settings selection, and deduplicated diagnostics. No Next migration. No GitHub Release or PR merge. A modernization-only GitHub Pages preview workflow is being validated.
+Implemented versioned persistent intent with legacy migration, onLoad readiness discovery, bounded retries/backoff, live preset and resolved-gradient verification, Flux-change and foreground recovery, background pausing, rolling recovery limits, cleanup, explicit settings selection, and deduplicated diagnostics. No Next migration. No GitHub Release or PR merge. A modernization-only GitHub Pages preview is deployed and publicly verified.
 
 Exact Revenge API generation verified at `1b1d297416594087769987908e5fc09af36b7e6e` (revenge-bundle 1.11.6). Target Discord Android 349.9 (349009), React 19.2.3, RN 0.86.0, RevengeXposed 1.6.3, Android 16 SDK 36. See docs/AUDIT.md for source links and original failure analysis.
 
@@ -32,14 +32,22 @@ Controller and adapter tests pass locally against mocked contracts (20 cases). [
 
 Startup now probes ambiguous AppState using bounded backoff, permits one limited initialization window if native state never resolves, and pauses on explicit background/inactive. Theme writes confirm synchronously when possible or wait up to five seconds for delayed live state/Promise completion before a failure is recorded. Existing retry/circuit limits remain. The expanded 28-case controller/adapter suite passes locally and in [Pages validation run 38951872536](https://github.com/itsrumsey/ClientThemes-Revenge/actions/runs/38951872536). Compiled-bundle lifecycle, restoration, foreground recovery, cleanup, SHA-256 integrity, and byte-identical repeat-build checks passed. The three-file Pages artifact uploaded successfully.
 
-Expected URL, **not deployed or verified**: `https://itsrumsey.github.io/ClientThemes-Revenge/`.
+Verified URL: `https://itsrumsey.github.io/ClientThemes-Revenge/`.
 
 The Pages workflow triggers only for modernization pushes or manual dispatch on that branch, validates pinned Node 22.23.3/npm 10.9.9, all tests and bundle checks, uploads exactly dist/ClientThemes/ with its license, and deploys through official configure-pages/upload-pages-artifact/deploy-pages actions. Pages write and OIDC permissions are limited to the deploy job. Concurrency serializes publishers. A post-deploy public HTTP check validates both endpoints, legacy manifest fields, and exact bytes/hash against the validated build. Main and pull-request events cannot deploy this workflow.
 
 See README.md for Android install, disabling the original plugin, same-URL updates/storage preservation, and rollback by reviewed revert on modernization. No on-device compatibility is implied by these automated checks.
 
-### Deployment blocker observed
+### Pages deployment verified
 
-Run 38951872536 deploy job was rejected before running any steps. GitHub's exact annotation: `Branch "modernization" is not allowed to deploy to github-pages due to environment protection rules.` The Pages source being GitHub Actions does not override the separate environment branch policy. A maintainer must allow modernization under Settings → Environments → github-pages → Deployment branches and tags, then rerun. The available connector cannot change this administrative setting. No protection is bypassed and no main-branch deployment is substituted.
+The former environment protection blocker was resolved. [Run 38952091972, attempt 2](https://github.com/itsrumsey/ClientThemes-Revenge/actions/runs/38952091972/attempts/2) successfully deployed commit 07f4044e81ec56e76447d114dc5b4df222f184be. The unauthenticated verification step confirmed public HTTP 200 for both files, valid legacy manifest JSON, and deployed SHA-256 `310c97ea2caf02f791109e25c2eb3be4b82c017c6c9978f4445c390fb7ae1663` matching the manifest and validated build.
 
-The public endpoints and deployed-byte hash cannot be verified until that job is allowed. An uploaded Pages artifact is not a deployment. No verified installation URL is claimed at this point.
+Verified installation URL: `https://itsrumsey.github.io/ClientThemes-Revenge/`.
+
+### Distinct display metadata
+
+The fork now uses the name **ClientThemes Revived** and description **Modernized ClientThemes for Revenge. Persistent theme selection, automatic startup restoration, and self-healing theme recovery.** Original author sapphire (757982547861962752), icon, GPL-3.0 and m4fn3 attribution remain. Installation URL, storage schema and runtime behavior are unchanged. No unsupported legacy manifest version field is added: the audited loader detects code updates by hash and refreshes manifest metadata independently.
+
+Compiled-bundle checks and public deployment verification now assert the exact display metadata and original author. A metadata-only update may retain the existing bundle hash. The loader must fetch the manifest to refresh the displayed name: use its update/refresh action or restart Discord with updates enabled; disable/reenable alone uses cached metadata. Do not uninstall or change the URL. The new metadata's final public verification is recorded in the latest Pages workflow log.
+
+The user reports successful installation in Revenge. This confirms installation only; the physical theme-restoration/recovery acceptance checklist remains pending. PR #1 stays draft and unmerged; no GitHub Release is published.

@@ -1,6 +1,6 @@
 {
-    "name": "ClientThemes",
-    "description": "it loads theme after startup",
+    "name": "ClientThemes Revived",
+    "description": "Modernized ClientThemes for Revenge. Persistent theme selection, automatic startup restoration, and self-healing theme recovery.",
     "authors": [
         {
             "name": "sapphire",

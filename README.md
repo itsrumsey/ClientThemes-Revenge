@@ -1,6 +1,6 @@
-# ClientThemes-Revenge
+# ClientThemes Revived
 
-A standalone reliability fork of sapphire / aeongdesu's **ClientThemes**, extracted from [aeongdesu/vdplugins](https://github.com/aeongdesu/vdplugins). Preserves the original m4fn3/FreeNitroTheme attribution and GPL-3.0 license. Original authors remain in the manifest; see [LICENSE](LICENSE).
+**ClientThemes Revived** is a standalone reliability fork of sapphire / aeongdesu's **ClientThemes**, extracted from [aeongdesu/vdplugins](https://github.com/aeongdesu/vdplugins). Preserves the original m4fn3/FreeNitroTheme attribution and GPL-3.0 license. Original authors remain in the manifest; see [LICENSE](LICENSE).
 
 This is a **review build**, not a released or device-certified plugin. It retains the Vendetta-compatible API verified in Revenge `1b1d297-main` (1.11.6); it does not target Revenge Next.
 
@@ -35,11 +35,11 @@ Outputs: `dist/ClientThemes/index.js` and `dist/ClientThemes/manifest.json`, inc
 
 The modernization branch is configured to deploy a **public, experimental preview** only after tests, compiled-bundle integrity and repeat-build checks pass. This is not production-ready and has not been validated on the target Android device. The preview files are public. Only the generated plugin and GPL license are included in the Pages artifact; repository visibility is controlled separately in GitHub settings.
 
-Expected installation URL (**not deployed or verified yet; environment protection currently blocks modernization**):
+Verified installation URL (unchanged):
 
 `https://itsrumsey.github.io/ClientThemes-Revenge/`
 
-Deployment run [38951872536](https://github.com/itsrumsey/ClientThemes-Revenge/actions/runs/38951872536) passed all validation but GitHub rejected the deploy job: `Branch "modernization" is not allowed to deploy to github-pages due to environment protection rules.` A maintainer must allow `modernization` in **Settings → Environments → github-pages → Deployment branches and tags**, then rerun deployment. Do not attempt installation until a Pages run passes its public verification step.
+[Pages run 38952091972, attempt 2](https://github.com/itsrumsey/ClientThemes-Revenge/actions/runs/38952091972/attempts/2) deployed successfully after the environment policy was updated. Its public verification confirmed HTTP 200 for the manifest and bundle and an exact SHA-256 match. The display-metadata update is validated by the same checks on subsequent deployments.
 
 The Pages workflow checks the public manifest and JavaScript after deployment and compares their SHA-256 to that run's validated build. An artifact upload or a green build alone is not deployment verification. Check PROJECT_STATUS.md and the latest Pages run for actual status.
 
@@ -47,12 +47,16 @@ The Pages workflow checks the public manifest and JavaScript after deployment an
 
 1. Open Discord with Revenge loaded. Go to **Settings → Revenge → Plugins** and find the existing/original **ClientThemes** entry. Turn it **off**; do not uninstall it if you want to retain its old saved selection. Disable other plugins that modify the same theme while testing.
 2. In the **legacy/Vendetta plugin** list, use the add/install button and paste `https://itsrumsey.github.io/ClientThemes-Revenge/` including the final slash. This is a plugin directory URL, not a spec-3 repository URL and not a GitHub source or artifact link. UI wording may vary with Revenge's settings layout.
-3. Enable the newly installed ClientThemes. Open its plugin settings and choose a supported preset, or use Discord's appearance picker. Since this Pages URL is a new installation ID, select your theme once; it cannot automatically read the original URL's private storage.
+3. Enable the newly installed **ClientThemes Revived** (the original remains named ClientThemes). Open its plugin settings and choose a supported preset, or use Discord's appearance picker. Since this Pages URL is a new installation ID, select your theme once; it cannot automatically read the original URL's private storage.
 4. Restart Discord and check the appearance. Test cold launch, force-stop, foreground return, and multiple screens using docs/DEVICE_TESTS.md. If recovery suspends, inspect `[ClientThemes 0.1.0]` logs before reselection or disable/reenable.
 
 ## Updates, saved selection, and rollback
 
 Validated pushes to `modernization` replace the files at the same Pages URL. The manifest hash changes when the compiled JavaScript changes; the audited legacy loader fetches a changed bundle when plugin updates are enabled (normally at startup). Use Revenge's plugin refresh/update control if available, or restart Discord with that entry's updates enabled. Deployment does not immediately hot-reload an already running Discord session.
+
+The refreshed manifest displays **ClientThemes Revived** with the description “Modernized ClientThemes for Revenge. Persistent theme selection, automatic startup restoration, and self-healing theme recovery.” Original author sapphire and GPL-3.0 attribution are preserved. The audited legacy manifest format has no version field; bundle hashes control code updates. This metadata-only change can leave the JavaScript hash unchanged, which is correct.
+
+To refresh the displayed name, use a plugin refresh/update action that fetches the manifest, then reopen the plugin list. If unavailable or the old label remains, enable updates for this entry and restart Discord. Toggling the plugin off/on alone only reloads cached code and does not fetch new metadata. Do not remove/reinstall: the existing Pages URL and saved selection remain unchanged.
 
 Keep the same URL, and **update rather than uninstall/reinstall**. The loader keys storage by URL and removes it on uninstall. The versioned selection survives same-URL updates and disable/reenable. Legacy `theme`/`isEnabled` values are migrated if already present in that installation's storage. For migration from the original URL, reselect once or transfer only those preferences through a trusted local backup/debug workflow. Keep the original plugin disabled to avoid competing hooks.
 
