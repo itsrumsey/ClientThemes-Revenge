@@ -63,12 +63,14 @@ for (let plug of await readdir("./plugins")) {
                 return map[id] || null
             },
             format: "iife",
-            banner: "/* ClientThemes by sapphire/aeongdesu; credits m4fn3/FreeNitroTheme. GPL-3.0; see LICENSE. */",
             compact: true,
             exports: "named",
         })
         await bundle.close()
 
+        // Add attribution after minification so the generated artifact retains it.
+        const notice = "/* ClientThemes by sapphire/aeongdesu; credits m4fn3/FreeNitroTheme. GPL-3.0; see LICENSE. */\n"
+        await writeFile(outPath, notice + await readFile(outPath, "utf8"))
         const toHash = await readFile(outPath)
         manifest.hash = createHash("sha256").update(toHash).digest("hex")
         manifest.main = "index.js"

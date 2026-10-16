@@ -124,8 +124,10 @@ export function createController({ storage, resolve, lifecycle, log = () => {},
         },
         stop() {
             running = false; generation++; clear(); pending = false;
-            offLifecycle?.(); offLifecycle = undefined;
-            session?.dispose(); session = null;
+            try { offLifecycle?.(); } catch (error) { log("cleanup-failed", { resource: "AppState", reason: String(error) }); }
+            offLifecycle = undefined;
+            try { session?.dispose(); } catch (error) { log("cleanup-failed", { resource: "theme session", reason: String(error) }); }
+            session = null;
             report("stopped");
         },
         choose,

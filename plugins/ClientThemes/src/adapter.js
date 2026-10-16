@@ -70,7 +70,7 @@ export function createResolver({ metro, patcher, onCatalog = () => {} }) {
                     const preset = store.gradientPreset;
                     const gradient = store.getLinearGradient();
                     const expected = utils.getLinearGradientForBackgroundGradient(presets[id]);
-                    if (typeof expected !== "string" || /undefined|NaN/.test(expected)) {
+                    if (typeof expected !== "string" || !expected || /undefined|NaN|null/.test(expected)) {
                         return { known: false, reason: "Preset color tokens no longer resolve" };
                     }
                     return { known: true, presetId: preset?.id ?? null,
