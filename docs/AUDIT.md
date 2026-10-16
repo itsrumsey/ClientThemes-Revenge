@@ -52,3 +52,13 @@ The adapter writes a local gradient only. It does not save server appearance set
 ## Remaining limitations
 
 A live store and resolved gradient comparison is stronger than checking saved configuration, but cannot inspect pixels painted by every screen. Cached styles, third-party themes, per-mode synced-theme behavior, token resolution and private-module changes need device verification. The capability adapter deliberately reports unsupported cases instead of claiming universal compatibility.
+
+## Final reliability review
+
+React Native's [AppState reference](https://reactnative.dev/docs/0.86/appstate) documents a null initial `currentState` while the legacy architecture retrieves it from native asynchronously. `unknown` and unexpected startup values are treated defensively; they are not evidence that Android is backgrounded. The previous controller incorrectly waited forever if no active change event arrived.
+
+The controller now reads currentState using seven bounded probes (250 ms, 500 ms, 1 s, 2 s, 4 s, 8 s, 15 s). A silent native transition to active is discovered. If no recognized state ever arrives, one 30-second provisional initialization/confirmation window permits cold restoration, then all startup polling and verification stop until a real foreground event. Explicit background/inactive cancels the probes/window and work immediately. Unload clears every timer. This is a conservative fallback under ambiguous native state, not proof that an unknown state is foreground.
+
+The corroborating Discord action creator dispatches UPDATE_BACKGROUND_GRADIENT_PRESET and returns no completion signal. Flux handlers update local state during dispatch in that source, but this does not establish exact Discord 349009 scheduling. The adapter must support synchronous updates and delayed store notification/hydration. A synchronous live match now confirms immediately with no recorded failure. Otherwise, a five-second confirmation window reads live state with backoff and receives store changes without another write. Promise completion is observed without blocking the worker; an unsettled Promise suspends after the deadline to prevent overlapping writes. A resolved dispatch that never matches counts as a failure only when its confirmation window expires. Existing retry budgets and six-write rolling-minute circuit protection remain.
+
+Regression coverage includes null/unknown/transient AppState, silent native resolution, explicit background/inactive, provisional expiry and cancellation, synchronous confirmation, delayed void dispatch, delayed/rejected/unsettled Promises, and disposal. These are simulated contracts, not physical-device results.

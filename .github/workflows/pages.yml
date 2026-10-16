@@ -1,0 +1,71 @@
+name: Deploy experimental ClientThemes preview
+on:
+  push:
+    branches: [modernization]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Only one Pages publisher, including manual rollback deployments.
+concurrency:
+  group: clientthemes-pages-preview
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/modernization'
+    runs-on: ubuntu-latest
+    outputs:
+      bundle_hash: ${{ steps.integrity.outputs.hash }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.23.3'
+          cache: npm
+      - name: Check pinned npm
+        run: test "$(npm --version)" = '10.9.9'
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npm run check:bundle
+      - name: Prepare public files and record bundle hash
+        id: integrity
+        run: |
+          cp LICENSE dist/ClientThemes/LICENSE
+          node --input-type=module -e "import fs from 'node:fs'; const m = JSON.parse(fs.readFileSync('dist/ClientThemes/manifest.json')); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'hash=' + m.hash + '\n');"
+          test "$(find dist/ClientThemes -type f | wc -l)" -eq 3
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/ClientThemes/
+
+  deploy:
+    if: github.ref == 'refs/heads/modernization'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - name: Deploy validated public preview
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.23.3'
+      - name: Verify public legacy install endpoints and exact bundle hash
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          EXPECTED_HASH: ${{ needs.validate.outputs.bundle_hash }}
+        run: node scripts/verify-deployment.mjs "$PAGE_URL" "$EXPECTED_HASH"

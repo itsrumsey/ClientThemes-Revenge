@@ -107,9 +107,11 @@ test('cleanup remains idempotent after successful initialization', async () => {
     assert.equal(f.life.count(), 0); assert.equal(f.clock.count(), 0);
 });
 
-test('startup while AppState is unknown waits for foreground without doing work', async () => {
+test('unknown startup has a bounded fallback, then stops all polling', async () => {
     const f = fixture({ initial: null }); f.control.start();
-    await f.clock.advance(60000); assert.equal(f.resolves, 0); assert.equal(f.calls, 0);
+    await f.clock.advance(30749); assert.equal(f.resolves, 0);
+    await f.clock.advance(30001); assert.equal(f.calls, 1);
+    assert.equal(f.control.inspect().active, false); assert.equal(f.clock.count(), 0);
     f.life.change('active'); await f.clock.advance(1000); assert.equal(f.calls, 1); f.control.stop();
 });
 test('async application completion cannot overwrite a newer explicit selection', async () => {
@@ -127,4 +129,76 @@ test('one failing lifecycle disposer does not prevent disposal of theme hooks', 
         resolve: () => ({ dispose: () => disposed++ }) });
     c.start(); await clock.advance(0); c.stop();
     assert.equal(disposed, 1); assert.equal(clock.count(), 0);
+});
+
+test('silent native AppState resolution is discovered without requiring a change event', async () => {
+    let state = null, calls = 0;
+    const clock = fakeClock(), c = createController({ storage: {}, clock,
+        lifecycle: { current: () => state, subscribe: () => () => {} },
+        resolve: () => { calls++; return { dispose() {} }; } });
+    c.start(); await clock.advance(250); state = 'active';
+    await clock.advance(500); assert.equal(calls, 1); c.stop(); assert.equal(clock.count(), 0);
+});
+test('unknown and unexpected startup values recover, but explicit background or inactive never poll', async () => {
+    for (const initial of ['unknown', 'transient']) {
+        const f = fixture({ initial }); f.control.start(); await f.clock.advance(61000);
+        assert.equal(f.calls, 1); assert.equal(f.clock.count(), 0); f.control.stop();
+    }
+    for (const initial of ['background', 'inactive']) {
+        const f = fixture({ initial }); f.control.start(); await f.clock.advance(120000);
+        assert.equal(f.calls, 0); assert.equal(f.resolves, 0); assert.equal(f.clock.count(), 0); f.control.stop();
+    }
+});
+test('background transition cancels unknown startup probes and provisional window', async () => {
+    for (const delay of [1000, 32000]) {
+        const f = fixture({ initial: null }); f.control.start(); await f.clock.advance(delay);
+        f.life.change('background'); const calls = f.calls;
+        await f.clock.advance(120000); assert.equal(f.calls, calls); assert.equal(f.clock.count(), 0);
+        f.control.stop();
+    }
+});
+test('unload during unknown startup cancels every probe', async () => {
+    const f = fixture({ initial: null }); f.control.start(); await f.clock.advance(250);
+    f.control.stop(); await f.clock.advance(120000);
+    assert.equal(f.resolves, 0); assert.equal(f.clock.count(), 0); assert.equal(f.life.count(), 0);
+});
+test('synchronous application confirms immediately without recording a failure', async () => {
+    const f = fixture(); f.session.apply = id => { f.session.read = () => ({ known: true, matches: true, presetId: id }); };
+    f.control.start(); await f.clock.advance(0);
+    assert.equal(f.control.inspect().status, 'healthy'); assert.equal(f.control.inspect().failures, 0);
+    assert.equal(f.events.some(([e]) => e === 'retrying'), false); f.control.stop();
+});
+test('void dispatch with delayed store update confirms without repeated writes or failures', async () => {
+    const f = fixture(); let writes = 0, matches = false;
+    f.session.read = () => ({ known: true, matches });
+    f.session.apply = () => { writes++; f.clock.set(() => { matches = true; f.reset(); }, 3000); };
+    f.control.start(); await f.clock.advance(2999);
+    assert.equal(writes, 1); assert.equal(f.control.inspect().failures, 0);
+    await f.clock.advance(1000); assert.equal(f.control.inspect().status, 'healthy');
+    assert.equal(writes, 1); assert.equal(f.control.inspect().failures, 0); f.control.stop();
+});
+test('delayed Promise application is serialized and an unsettled Promise trips the circuit', async () => {
+    for (const settles of [true, false]) {
+        const f = fixture(); let writes = 0, matches = false;
+        f.session.read = () => ({ known: true, matches });
+        f.session.apply = () => { writes++; return new Promise(resolve => {
+            if (settles) f.clock.set(() => { matches = true; resolve(); }, 3000);
+        }); };
+        f.control.start(); await f.clock.advance(6000);
+        assert.equal(writes, 1);
+        assert.equal(f.control.inspect().status, settles ? 'healthy' : 'suspended');
+        if (!settles) assert.equal(f.clock.count(), 0);
+        f.control.stop();
+    }
+});
+test('unload and background suppress confirmation work; late Promise rejection is handled', async () => {
+    const f = fixture(); let reject;
+    f.session.apply = () => new Promise((_, r) => { reject = r; });
+    f.control.start(); await f.clock.advance(0); f.life.change('background');
+    assert.equal(f.clock.count(), 0); reject(Error('late failure')); await f.clock.advance(10000);
+    assert.equal(f.clock.count(), 0); f.control.stop();
+    const g = fixture(); let finish;
+    g.session.apply = () => new Promise(r => { finish = r; });
+    g.control.start(); await g.clock.advance(0); g.control.stop(); finish(); await g.clock.advance(10000);
+    assert.equal(g.clock.count(), 0); assert.equal(g.disposed, 1);
 });

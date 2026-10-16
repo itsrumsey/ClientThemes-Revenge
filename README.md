@@ -29,16 +29,34 @@ npm run check:bundle
 
 Outputs: `dist/ClientThemes/index.js` and `dist/ClientThemes/manifest.json`, including the bundle's SHA-256. `check:bundle` evaluates the compiled plugin with mocked host APIs, exercises restoration/recovery/cleanup, validates the manifest and checks a second build is byte-identical. It does not run Discord or Android.
 
-[GitHub Actions](https://github.com/itsrumsey/ClientThemes-Revenge/actions) runs these checks and uploads a downloadable `ClientThemes-review-<commit>` artifact with plugin files, license and documentation. Sign in with repository access to download private artifacts. No release or hosting is published by the workflow.
+[GitHub Actions](https://github.com/itsrumsey/ClientThemes-Revenge/actions) runs these checks and uploads a downloadable `ClientThemes-review-<commit>` artifact with plugin files, license and documentation. Sign in with repository access to download private artifacts. The build workflow uploads review artifacts; the separate modernization-only Pages workflow publishes a validated experimental preview without creating a release.
 
-## Install a reviewed build
+## Public experimental Pages preview
 
-1. Download and unzip a passing Actions artifact (or build locally).
-2. Serve the extracted directory over an HTTPS URL reachable by your device. Keep `index.js` and `manifest.json` together at that URL. A GitHub Actions artifact download URL or private GitHub source page is not a plugin install URL. Do not expose repository credentials to Discord.
-3. In Revenge's **legacy/Vendetta plugins** interface, add the directory URL ending in `/`. This is not a spec-3 plugin repository URL. Enable ClientThemes and open its settings, or select a supported preset in Discord's appearance picker.
-4. Keep the install URL stable for updates. Legacy storage is keyed by URL. Installing this fork at a new URL cannot automatically access the original plugin's storage: select the preset once, or transfer only your old `theme` and `isEnabled` values through a trusted local backup/debug workflow. Disable the old plugin to avoid competing hooks.
+The modernization branch is configured to deploy a **public, experimental preview** only after tests, compiled-bundle integrity and repeat-build checks pass. This is not production-ready and has not been validated on the target Android device. The repository remains private; the generated plugin and GPL license are published publicly.
 
-The private repository remains private. You must choose an appropriate review-hosting location; this task does not publish one. The generated files are independently installable when served as described.
+Expected installation URL (deployment verification pending):
+
+`https://itsrumsey.github.io/ClientThemes-Revenge/`
+
+The Pages workflow checks the public manifest and JavaScript after deployment and compares their SHA-256 to that run's validated build. An artifact upload or a green build alone is not deployment verification. Check PROJECT_STATUS.md and the latest Pages run for actual status.
+
+## Install in Revenge on Android
+
+1. Open Discord with Revenge loaded. Go to **Settings → Revenge → Plugins** and find the existing/original **ClientThemes** entry. Turn it **off**; do not uninstall it if you want to retain its old saved selection. Disable other plugins that modify the same theme while testing.
+2. In the **legacy/Vendetta plugin** list, use the add/install button and paste `https://itsrumsey.github.io/ClientThemes-Revenge/` including the final slash. This is a plugin directory URL, not a spec-3 repository URL and not a GitHub source or artifact link. UI wording may vary with Revenge's settings layout.
+3. Enable the newly installed ClientThemes. Open its plugin settings and choose a supported preset, or use Discord's appearance picker. Since this Pages URL is a new installation ID, select your theme once; it cannot automatically read the original URL's private storage.
+4. Restart Discord and check the appearance. Test cold launch, force-stop, foreground return, and multiple screens using docs/DEVICE_TESTS.md. If recovery suspends, inspect `[ClientThemes 0.1.0]` logs before reselection or disable/reenable.
+
+## Updates, saved selection, and rollback
+
+Validated pushes to `modernization` replace the files at the same Pages URL. The manifest hash changes when the compiled JavaScript changes; the audited legacy loader fetches a changed bundle when plugin updates are enabled (normally at startup). Use Revenge's plugin refresh/update control if available, or restart Discord with that entry's updates enabled. Deployment does not immediately hot-reload an already running Discord session.
+
+Keep the same URL, and **update rather than uninstall/reinstall**. The loader keys storage by URL and removes it on uninstall. The versioned selection survives same-URL updates and disable/reenable. Legacy `theme`/`isEnabled` values are migrated if already present in that installation's storage. For migration from the original URL, reselect once or transfer only those preferences through a trusted local backup/debug workflow. Keep the original plugin disabled to avoid competing hooks.
+
+For rollback, first turn off automatic updates on the affected entry if that control is available, then disable the preview if necessary. To roll back for all preview users while keeping the same URL/storage, a maintainer should revert the breaking code change on `modernization` (without removing the Pages workflow), review the diff, and push. The workflow rebuilds and tests the revert before publishing; then refresh/restart Discord. Do not force-push `main` or merge the draft PR for rollback. Previous successful Actions artifacts remain downloadable for local diagnosis or temporary hosting, but a different install URL uses separate storage. Reverting to the original upstream plugin requires disabling this preview and reenabling the old entry; its saved state is separate.
+
+No GitHub Release is created by these workflows. Pages publishes only `index.js`, `manifest.json`, and LICENSE; source, tests, lockfiles, credentials, and workflow files are excluded.
 
 ## Behavior and diagnostics
 

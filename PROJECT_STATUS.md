@@ -8,7 +8,7 @@ Original authorship (sapphire / aeongdesu), m4fn3 attribution, and GPL-3.0 LICEN
 
 ## Modernization
 
-Implemented versioned persistent intent with legacy migration, onLoad readiness discovery, bounded retries/backoff, live preset and resolved-gradient verification, Flux-change and foreground recovery, background pausing, rolling recovery limits, cleanup, explicit settings selection, and deduplicated diagnostics. No Next migration. No release publication or hosted install URL.
+Implemented versioned persistent intent with legacy migration, onLoad readiness discovery, bounded retries/backoff, live preset and resolved-gradient verification, Flux-change and foreground recovery, background pausing, rolling recovery limits, cleanup, explicit settings selection, and deduplicated diagnostics. No Next migration. No GitHub Release or PR merge. A modernization-only GitHub Pages preview workflow is being validated.
 
 Exact Revenge API generation verified at `1b1d297416594087769987908e5fc09af36b7e6e` (revenge-bundle 1.11.6). Target Discord Android 349.9 (349009), React 19.2.3, RN 0.86.0, RevengeXposed 1.6.3, Android 16 SDK 36. See docs/AUDIT.md for source links and original failure analysis.
 
@@ -20,10 +20,20 @@ Controller and adapter tests pass locally against mocked contracts (20 cases). [
 
 ## Known limitations
 
-- A private repository and downloadable artifact do not themselves provide an installable HTTPS hosting URL. No hosting has been published.
+- Pages preview is public and experimental; target-device acceptance remains pending. Only the generated bundle, manifest and GPL license are published.
 - Storage belongs to an installation URL. Same-URL updates preserve preferences; new-URL migration from upstream requires reselection or a trusted local transfer.
 - Removed presets/tokens retain intent and suspend; there are no guessed aliases. A module/API update may require adapter work.
 - Live gradient verification cannot detect every renderer/style-cache problem. Competing plugins and per-mode synced theme behavior require device tests.
 - Native custom-editor payloads and Revenge JSON themes are not restored by this plugin; choosing them follows Discord instead.
 - The original plugin's persistent appearance-sync mutation cannot be inferred or undone safely. This fork leaves underlying preferences intact.
 - Disable removes hooks but does not force-reset the currently displayed gradient.
+
+## Final review and Pages preview
+
+Startup now probes ambiguous AppState using bounded backoff, permits one limited initialization window if native state never resolves, and pauses on explicit background/inactive. Theme writes confirm synchronously when possible or wait up to five seconds for delayed live state/Promise completion before a failure is recorded. Existing retry/circuit limits remain. The expanded 28-case controller/adapter suite passes locally; CI and public endpoint verification are pending for this revision.
+
+Expected URL, not yet verified for this revision: `https://itsrumsey.github.io/ClientThemes-Revenge/`.
+
+The Pages workflow triggers only for modernization pushes or manual dispatch on that branch, validates pinned Node 22.23.3/npm 10.9.9, all tests and bundle checks, uploads exactly dist/ClientThemes/ with its license, and deploys through official configure-pages/upload-pages-artifact/deploy-pages actions. Pages write and OIDC permissions are limited to the deploy job. Concurrency serializes publishers. A post-deploy public HTTP check validates both endpoints, legacy manifest fields, and exact bytes/hash against the validated build. Main and pull-request events cannot deploy this workflow.
+
+See README.md for Android install, disabling the original plugin, same-URL updates/storage preservation, and rollback by reviewed revert on modernization. No on-device compatibility is implied by these automated checks.

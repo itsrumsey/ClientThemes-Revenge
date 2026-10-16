@@ -11,6 +11,8 @@ export function createController({ storage, resolve, lifecycle, log = () => {},
     let selection;
     let running = false, active = false, busy = false, applying = false;
     let generation = 0, timer = null, pending = false, session = null, offLifecycle;
+    let startupTimer = null, startupProbe = 0, startupFinished = false, provisional = false;
+    let confirmation = null;
     let failures = 0, circuit = false, writes = [], status = "stopped", lastLog = "", notBefore = 0;
 
     const report = (code, detail = {}) => {
@@ -66,6 +68,28 @@ export function createController({ storage, resolve, lifecycle, log = () => {},
                 return;
             }
             const actual = session.read(selection.presetId);
+            if (confirmation) {
+                if (confirmation.selection !== selection) {
+                    // Do not overlap a pending write with a new user selection.
+                    if (!confirmation.settled && clock.now() < confirmation.deadline) return;
+                    if (!confirmation.settled) throw new Error("Previous theme write did not settle");
+                    confirmation = null;
+                } else if (confirmation.error) {
+                    const error = confirmation.error; confirmation = null; throw error;
+                } else if (actual.known && actual.matches && confirmation.settled) {
+                    confirmation = null;
+                } else if (clock.now() < confirmation.deadline) {
+                    report("confirming", { presetId: selection.presetId });
+                    return;
+                } else if (!confirmation.settled) {
+                    circuit = true;
+                    report("suspended", { reason: "Theme application did not settle within 5 seconds" });
+                    return;
+                } else {
+                    confirmation = null;
+                    throw new Error(actual.reason || "Theme store did not confirm application within 5 seconds");
+                }
+            }
             if (!actual.known) throw new Error(actual.reason || "Live gradient is unreadable");
             if (actual.matches) {
                 failures = 0; notBefore = 0;
@@ -80,21 +104,38 @@ export function createController({ storage, resolve, lifecycle, log = () => {},
             }
             report("drift", { desired: selection.presetId, actual: actual.presetId });
             writes.push(clock.now());
+            const write = confirmation = { selection, deadline: clock.now() + 5000,
+                settled: true, error: null, checks: 0 };
             applying = true;
-            const selectedAtWrite = selection;
-            try { await session.apply(selection.presetId); }
+            try {
+                const result = session.apply(selection.presetId);
+                if (result && typeof result.then === "function") {
+                    write.settled = false;
+                    Promise.resolve(result).then(() => settle(), error => settle(error));
+                    function settle(error) {
+                        if (!running || token !== generation || confirmation !== write) return;
+                        write.settled = true; write.error = error;
+                        enqueue();
+                    }
+                }
+            } catch (error) { confirmation = null; throw error; }
             finally { applying = false; }
-            if (!running || token !== generation) return;
-            // A concurrent user choice wins over completion of an older application.
-            if (selection !== selectedAtWrite) { pending = true; return; }
-            fail("Awaiting confirmation from live gradient store");
+            // Synchronous dispatch/store updates need no failed-attempt bookkeeping.
+            const applied = session.read(selection.presetId);
+            if (write.settled && applied.known && applied.matches) {
+                confirmation = null; failures = 0; notBefore = 0;
+                report("healthy", { presetId: selection.presetId });
+            } else report("confirming", { presetId: selection.presetId });
         } catch (e) {
             if (running && token === generation) fail(e);
         } finally {
             busy = false;
-            if (running && token === generation && !circuit && active && (failures || selection.enabled || !session)) {
+            if (running && token === generation && !circuit && active && (confirmation || failures || selection.enabled || !session)) {
                 // Backoff cannot be bypassed by a stream of store-change events.
-                enqueue(failures ? BACKOFF[Math.min(failures - 1, BACKOFF.length - 1)] : pending ? 0 : verifyMs);
+                if (confirmation) {
+                    const remaining = Math.max(0, confirmation.deadline - clock.now());
+                    enqueue(Math.min(remaining, BACKOFF[Math.min(confirmation.checks++, BACKOFF.length - 1)]));
+                } else enqueue(failures ? BACKOFF[Math.min(failures - 1, BACKOFF.length - 1)] : pending ? 0 : verifyMs);
             }
         }
     }
@@ -108,22 +149,50 @@ export function createController({ storage, resolve, lifecycle, log = () => {},
         report("selection-saved", { enabled: selection.enabled, presetId: selection.presetId });
         enqueue();
     }
+    function clearStartup() {
+        if (startupTimer !== null) clock.clear(startupTimer);
+        startupTimer = null;
+    }
+    function activity(state) {
+        if (state === "active" || state === "background" || state === "inactive") {
+            startupFinished = true; provisional = false; clearStartup();
+            active = state === "active";
+            if (active) enqueue(); else clear();
+            return;
+        }
+        // Unknown is not proof of foreground or background. Probe only at startup.
+        if (startupFinished) { if (!provisional) { active = false; clear(); } return; }
+        if (startupTimer !== null) return;
+        if (startupProbe < BACKOFF.length) {
+            startupTimer = clock.set(() => {
+                startupTimer = null;
+                if (running) activity(lifecycle.current());
+            }, BACKOFF[startupProbe++]);
+        } else {
+            // A missing native change event must not permanently block cold restoration.
+            // Permit one bounded initialization window, then wait for a real lifecycle event.
+            startupFinished = true; provisional = true; active = true;
+            report("startup-provisional", { reason: "AppState still unknown after bounded probes", windowMs: 30000 });
+            startupTimer = clock.set(() => {
+                startupTimer = null;
+                if (!running || !provisional) return;
+                provisional = false; active = false; clear();
+                report("waiting-for-foreground");
+            }, 30000);
+            enqueue();
+        }
+    }
     return {
         start() {
             if (running) return;
             selection = loadSelection(storage);
-            running = true; generation++; active = lifecycle.current() === "active";
+            running = true; generation++;
             report("startup", { ...selection });
-            offLifecycle = lifecycle.subscribe(state => {
-                if (!running) return;
-                active = state === "active";
-                if (!active) clear();
-                else enqueue();
-            });
-            enqueue();
+            offLifecycle = lifecycle.subscribe(state => { if (running) activity(state); });
+            activity(lifecycle.current());
         },
         stop() {
-            running = false; generation++; clear(); pending = false;
+            running = false; generation++; clear(); clearStartup(); pending = false; confirmation = null;
             try { offLifecycle?.(); } catch (error) { log("cleanup-failed", { resource: "AppState", reason: String(error) }); }
             offLifecycle = undefined;
             try { session?.dispose(); } catch (error) { log("cleanup-failed", { resource: "theme session", reason: String(error) }); }
