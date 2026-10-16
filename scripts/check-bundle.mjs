@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { runInNewContext } from 'node:vm';
 import { execFileSync } from 'node:child_process';
 import { fixture } from '../tests/runtime-fixture.js';
 import { fakeClock, lifecycle } from '../tests/helpers.js';
+import { evaluateLikeRevenge } from './revenge-eval.mjs';
 
 const path = 'dist/ClientThemes/';
 const bytes = await readFile(path + 'index.js');
@@ -22,14 +22,17 @@ f.metro.common = { React: {}, ReactNative: { AppState: {
     get currentState() { return life.current(); },
     addEventListener(_, cb) { return { remove: life.subscribe(cb) }; }
 } } };
-const plugin = runInNewContext(bytes.toString(), {
-    vendetta: { metro: f.metro, patcher: f.patcher, plugin: { storage } },
+// Evaluate the compiled artifact exactly as Revenge's legacy loader does (`vendetta=>{return <bundle>}`).
+// A bare script evaluation is not equivalent: it hid a header newline that made Revenge return undefined.
+const plugin = evaluateLikeRevenge(bytes.toString(), { metro: f.metro, patcher: f.patcher, plugin: { storage } }, {
     console: { info() {}, error(...args) { throw Error(args.join(' ')); } },
     Date: class extends Date { static now() { return clock.now(); } },
     setTimeout: clock.set, clearTimeout: clock.clear
 });
-assert.equal(typeof plugin?.onLoad, 'function', 'Bundle must evaluate to Vendetta lifecycle exports');
-assert.equal(typeof plugin.settings, 'function');
+for (const key of ['onLoad', 'onUnload', 'settings']) {
+    assert.equal(typeof plugin?.[key], 'function',
+        `Revenge's wrapper must yield a plugin exposing ${key}() (a line terminator before the bundle expression makes it return undefined)`);
+}
 assert.equal(life.count(), 0, 'No module-evaluation side effects');
 plugin.onLoad(); plugin.onLoad(); await clock.advance(1000);
 assert.equal(f.store.gradientPreset.id, 0);
@@ -52,8 +55,7 @@ degraded.metro.common = { React: {}, ReactNative: { AppState: {
     get currentState() { return unknownLife.current(); },
     addEventListener(_, cb) { return { remove: unknownLife.subscribe(cb) }; }
 } } };
-const degradedPlugin = runInNewContext(bytes.toString(), {
-    vendetta: { metro: degraded.metro, patcher: degraded.patcher, plugin: { storage: degradedStorage } },
+const degradedPlugin = evaluateLikeRevenge(bytes.toString(), { metro: degraded.metro, patcher: degraded.patcher, plugin: { storage: degradedStorage } }, {
     console: { info() {}, error(...args) { throw Error(args.join(' ')); } },
     Date: class extends Date { static now() { return degradedClock.now(); } },
     setTimeout: degradedClock.set, clearTimeout: degradedClock.clear
