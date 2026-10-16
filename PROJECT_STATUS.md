@@ -30,10 +30,16 @@ Controller and adapter tests pass locally against mocked contracts (20 cases). [
 
 ## Final review and Pages preview
 
-Startup now probes ambiguous AppState using bounded backoff, permits one limited initialization window if native state never resolves, and pauses on explicit background/inactive. Theme writes confirm synchronously when possible or wait up to five seconds for delayed live state/Promise completion before a failure is recorded. Existing retry/circuit limits remain. The expanded 28-case controller/adapter suite passes locally; CI and public endpoint verification are pending for this revision.
+Startup now probes ambiguous AppState using bounded backoff, permits one limited initialization window if native state never resolves, and pauses on explicit background/inactive. Theme writes confirm synchronously when possible or wait up to five seconds for delayed live state/Promise completion before a failure is recorded. Existing retry/circuit limits remain. The expanded 28-case controller/adapter suite passes locally and in [Pages validation run 38951872536](https://github.com/itsrumsey/ClientThemes-Revenge/actions/runs/38951872536). Compiled-bundle lifecycle, restoration, foreground recovery, cleanup, SHA-256 integrity, and byte-identical repeat-build checks passed. The three-file Pages artifact uploaded successfully.
 
-Expected URL, not yet verified for this revision: `https://itsrumsey.github.io/ClientThemes-Revenge/`.
+Expected URL, **not deployed or verified**: `https://itsrumsey.github.io/ClientThemes-Revenge/`.
 
 The Pages workflow triggers only for modernization pushes or manual dispatch on that branch, validates pinned Node 22.23.3/npm 10.9.9, all tests and bundle checks, uploads exactly dist/ClientThemes/ with its license, and deploys through official configure-pages/upload-pages-artifact/deploy-pages actions. Pages write and OIDC permissions are limited to the deploy job. Concurrency serializes publishers. A post-deploy public HTTP check validates both endpoints, legacy manifest fields, and exact bytes/hash against the validated build. Main and pull-request events cannot deploy this workflow.
 
 See README.md for Android install, disabling the original plugin, same-URL updates/storage preservation, and rollback by reviewed revert on modernization. No on-device compatibility is implied by these automated checks.
+
+### Deployment blocker observed
+
+Run 38951872536 deploy job was rejected before running any steps. GitHub's exact annotation: `Branch "modernization" is not allowed to deploy to github-pages due to environment protection rules.` The Pages source being GitHub Actions does not override the separate environment branch policy. A maintainer must allow modernization under Settings → Environments → github-pages → Deployment branches and tags, then rerun. The available connector cannot change this administrative setting. No protection is bypassed and no main-branch deployment is substituted.
+
+The public endpoints and deployed-byte hash cannot be verified until that job is allowed. An uploaded Pages artifact is not a deployment. No verified installation URL is claimed at this point.

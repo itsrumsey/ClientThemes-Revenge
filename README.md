@@ -29,15 +29,17 @@ npm run check:bundle
 
 Outputs: `dist/ClientThemes/index.js` and `dist/ClientThemes/manifest.json`, including the bundle's SHA-256. `check:bundle` evaluates the compiled plugin with mocked host APIs, exercises restoration/recovery/cleanup, validates the manifest and checks a second build is byte-identical. It does not run Discord or Android.
 
-[GitHub Actions](https://github.com/itsrumsey/ClientThemes-Revenge/actions) runs these checks and uploads a downloadable `ClientThemes-review-<commit>` artifact with plugin files, license and documentation. Sign in with repository access to download private artifacts. The build workflow uploads review artifacts; the separate modernization-only Pages workflow publishes a validated experimental preview without creating a release.
+[GitHub Actions](https://github.com/itsrumsey/ClientThemes-Revenge/actions) runs these checks and uploads a downloadable `ClientThemes-review-<commit>` artifact with plugin files, license and documentation. Sign in to GitHub to download Actions artifacts. The build workflow uploads review artifacts; the separate modernization-only Pages workflow publishes a validated experimental preview without creating a release.
 
 ## Public experimental Pages preview
 
-The modernization branch is configured to deploy a **public, experimental preview** only after tests, compiled-bundle integrity and repeat-build checks pass. This is not production-ready and has not been validated on the target Android device. The repository remains private; the generated plugin and GPL license are published publicly.
+The modernization branch is configured to deploy a **public, experimental preview** only after tests, compiled-bundle integrity and repeat-build checks pass. This is not production-ready and has not been validated on the target Android device. The preview files are public. Only the generated plugin and GPL license are included in the Pages artifact; repository visibility is controlled separately in GitHub settings.
 
-Expected installation URL (deployment verification pending):
+Expected installation URL (**not deployed or verified yet; environment protection currently blocks modernization**):
 
 `https://itsrumsey.github.io/ClientThemes-Revenge/`
+
+Deployment run [38951872536](https://github.com/itsrumsey/ClientThemes-Revenge/actions/runs/38951872536) passed all validation but GitHub rejected the deploy job: `Branch "modernization" is not allowed to deploy to github-pages due to environment protection rules.` A maintainer must allow `modernization` in **Settings → Environments → github-pages → Deployment branches and tags**, then rerun deployment. Do not attempt installation until a Pages run passes its public verification step.
 
 The Pages workflow checks the public manifest and JavaScript after deployment and compares their SHA-256 to that run's validated build. An artifact upload or a green build alone is not deployment verification. Check PROJECT_STATUS.md and the latest Pages run for actual status.
 
