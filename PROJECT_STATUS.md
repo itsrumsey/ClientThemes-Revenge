@@ -14,7 +14,7 @@ Exact Revenge API generation verified at `1b1d297416594087769987908e5fc09af36b7e
 
 ## Validation status
 
-Controller and adapter tests pass locally against mocked contracts. Compiled-bundle and repeat-build checks are provided in CI; final CI results will be recorded after the review branch build. Local package installation is blocked by a refusing environment proxy, so baseline dependency installation/build ran in GitHub Actions.
+Controller and adapter tests pass locally against mocked contracts (20 cases). [Modernization CI run 38949579375](https://github.com/itsrumsey/ClientThemes-Revenge/actions/runs/38949579375) passed the initial 17-case suite, compiled-bundle lifecycle/restoration/recovery/cleanup checks, manifest integrity, and byte-identical repeat-build verification. The review branch includes additional unknown-AppState, concurrent-selection, and disposal-failure coverage; consult its latest Actions run for the current commit. Downloadable review artifacts are attached to passing runs. Local package installation is blocked by a refusing environment proxy, so baseline dependency installation/build ran in GitHub Actions.
 
 **No physical-device tests performed. Exact Discord 349009 module signatures and rendered colors are not verified.** Adjacent 349.5 datamining evidence supports the guarded contracts but cannot establish installed-runtime compatibility. All physical acceptance cases remain pending in docs/DEVICE_TESTS.md.
 

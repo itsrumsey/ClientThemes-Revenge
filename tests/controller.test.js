@@ -106,3 +106,25 @@ test('cleanup remains idempotent after successful initialization', async () => {
     assert.equal(f.calls, 1); assert.equal(f.disposed, 1);
     assert.equal(f.life.count(), 0); assert.equal(f.clock.count(), 0);
 });
+
+test('startup while AppState is unknown waits for foreground without doing work', async () => {
+    const f = fixture({ initial: null }); f.control.start();
+    await f.clock.advance(60000); assert.equal(f.resolves, 0); assert.equal(f.calls, 0);
+    f.life.change('active'); await f.clock.advance(1000); assert.equal(f.calls, 1); f.control.stop();
+});
+test('async application completion cannot overwrite a newer explicit selection', async () => {
+    const f = fixture(); let finish;
+    f.session.apply = () => new Promise(r => { finish = r; });
+    f.control.start(); await f.clock.advance(0);
+    f.control.choose(5); finish(); await f.clock.advance(0);
+    assert.equal(f.storage.selection.presetId, 5);
+    f.control.stop();
+});
+test('one failing lifecycle disposer does not prevent disposal of theme hooks', async () => {
+    const clock = fakeClock(); let disposed = 0;
+    const c = createController({ storage: {}, clock,
+        lifecycle: { current: () => 'active', subscribe: () => () => { throw Error('remove failed'); } },
+        resolve: () => ({ dispose: () => disposed++ }) });
+    c.start(); await clock.advance(0); c.stop();
+    assert.equal(disposed, 1); assert.equal(clock.count(), 0);
+});

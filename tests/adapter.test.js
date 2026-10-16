@@ -5,7 +5,8 @@ import { fixture } from './runtime-fixture.js';
 
 test('missing contracts produce no partial hooks or mutations', () => {
     const f = fixture(); delete f.modules[0].updateBackgroundGradientPreset;
-    assert.equal(f.open(), null); assert.equal(f.patches, 0); assert.equal(f.listeners.size, 0);
+    assert.throws(f.open, /Missing Discord theme contracts: updateBackgroundGradientPreset/);
+    assert.equal(f.patches, 0); assert.equal(f.listeners.size, 0);
     assert.equal(f.syncWrites, 0);
 });
 test('compares live preset and resolved gradient, not just matching saved ID', () => {

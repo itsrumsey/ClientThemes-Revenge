@@ -12,13 +12,17 @@ export function createResolver({ metro, patcher, onCatalog = () => {} }) {
         const premium = metro.findByProps("canUseClientThemes");
         const sync = metro.findByProps("setShouldSyncAppearanceSettings");
         // No mutations or partial subscriptions before required contracts exist.
-        if (typeof actions?.updateBackgroundGradientPreset !== "function"
-            || typeof store?.getLinearGradient !== "function"
-            || typeof store?.addChangeListener !== "function"
-            || typeof store?.removeChangeListener !== "function"
-            || !constants?.BACKGROUND_GRADIENT_PRESETS_MAP
-            || typeof utils?.getLinearGradientForBackgroundGradient !== "function"
-            || typeof selector?.handleSaveTheme !== "function") return null;
+        const required = {
+            updateBackgroundGradientPreset: typeof actions?.updateBackgroundGradientPreset === "function",
+            "ClientThemesBackgroundStore.getLinearGradient": typeof store?.getLinearGradient === "function",
+            "ClientThemesBackgroundStore.addChangeListener": typeof store?.addChangeListener === "function",
+            "ClientThemesBackgroundStore.removeChangeListener": typeof store?.removeChangeListener === "function",
+            BACKGROUND_GRADIENT_PRESETS_MAP: !!constants?.BACKGROUND_GRADIENT_PRESETS_MAP,
+            getLinearGradientForBackgroundGradient: typeof utils?.getLinearGradientForBackgroundGradient === "function",
+            handleSaveTheme: typeof selector?.handleSaveTheme === "function"
+        };
+        const missing = Object.keys(required).filter(key => !required[key]);
+        if (missing.length) throw new Error(`Missing Discord theme contracts: ${missing.join(", ")}`);
         const presets = constants.BACKGROUND_GRADIENT_PRESETS_MAP;
         const disposers = [];
         let disposed = false;
