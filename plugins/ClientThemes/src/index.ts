@@ -8,6 +8,7 @@ import { React, ReactNative } from "@vendetta/metro/common";
 import { createController } from "./controller.js";
 import { createResolver } from "./adapter.js";
 import { createFeatures } from "./features.js";
+import { createThemeSources, formatValue } from "./diagnostics.js";
 import { loadSelection, saveSelection } from "./state.js";
 
 let controller;
@@ -58,6 +59,19 @@ export function settings() {
     const snapshot = controller?.inspect();
     const unlock = features?.status();
     const select = id => { controller?.choose(id); refresh(); };
+    // Read-only diagnostics: captured when this screen opens and on explicit recapture only.
+    const [sources, setSources] = React.useState(() => createThemeSources({ metro, storage }).capture());
+    const recapture = () => setSources(createThemeSources({ metro, storage }).capture());
+    let group;
+    const sourceRows = sources.rows.flatMap((entry, i) => {
+        const items = [];
+        if (entry.group !== group) {
+            group = entry.group;
+            items.push(React.createElement(Text, { key: `g${i}`, style: { color, fontWeight: "bold", marginTop: 4 } }, group));
+        }
+        items.push(React.createElement(Text, { key: `r${i}`, selectable: true, style: { color } }, `${entry.label}: ${formatValue(entry)}`));
+        return items;
+    });
     return React.createElement(ScrollView, { contentContainerStyle: { padding: 16, gap: 12 } },
         React.createElement(Text, { style: { color, fontSize: 20 } }, "ClientThemes"),
         React.createElement(Text, { style: { color } },
@@ -69,5 +83,10 @@ export function settings() {
             { key: p.id, title: p.name, onPress: () => select(p.id) })) : [
             React.createElement(Text, { key: "waiting", style: { color } },
                 "Waiting for supported theme modules. If suspended, reenable after reviewing ClientThemes logs.")
-        ]));
+        ]),
+        React.createElement(Text, { style: { color, fontSize: 18, marginTop: 12 } }, "Theme Sources"),
+        React.createElement(Text, { style: { color } },
+            `Read-only snapshot captured ${new Date(sources.capturedAt).toISOString()}. Values are shown as read; "unknown" means not readable. Status above does not verify these.`),
+        React.createElement(Button, { title: "Recapture theme sources", onPress: recapture }),
+        ...sourceRows);
 }

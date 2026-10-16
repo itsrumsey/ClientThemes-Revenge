@@ -18,7 +18,14 @@ assert.equal(manifest.hash, createHash('sha256').update(bytes).digest('hex'));
 assert.match(bytes.toString(), /GPL-3\.0/);
 const f = fixture(), clock = fakeClock(), life = lifecycle();
 const storage = { isEnabled: true, theme: 0 };
-f.metro.common = { React: {}, ReactNative: { AppState: {
+// Minimal React/RN stand-ins so the compiled settings() screen can be rendered once.
+const stateSetters = [];
+const ReactStub = {
+    useReducer: () => [0, () => {}],
+    useState: init => { const box = [typeof init === 'function' ? init() : init, next => { box[0] = next; }]; stateSetters.push(box); return box; },
+    createElement: (type, props, ...children) => ({ type, props: props ?? {}, children: children.flat() })
+};
+f.metro.common = { React: ReactStub, ReactNative: { ScrollView: 'ScrollView', Text: 'Text', Button: 'Button', useColorScheme: () => 'dark', AppState: {
     get currentState() { return life.current(); },
     addEventListener(_, cb) { return { remove: life.subscribe(cb) }; }
 } } };
@@ -37,6 +44,23 @@ assert.equal(life.count(), 0, 'No module-evaluation side effects');
 plugin.onLoad(); plugin.onLoad(); await clock.advance(1000);
 assert.equal(f.store.gradientPreset.id, 0);
 assert.equal(life.count(), 1);
+// Theme Sources: rendering the compiled settings screen captures read-only diagnostics.
+const texts = node => node == null || typeof node !== 'object' ? (node == null ? [] : [String(node)]) : node.children.flatMap(texts);
+const storageBefore = JSON.stringify(storage), presetBefore = f.store.gradientPreset;
+const screen = plugin.settings();
+const lines = texts(screen);
+assert.ok(lines.includes('Theme Sources'), 'Settings must render the Theme Sources section');
+assert.ok(lines.includes('gradientPreset.id: 0'), 'Gradient store value is shown explicitly');
+assert.ok(lines.includes('saved selection.presetId: 0'));
+assert.ok(lines.includes('theme: unknown (ThemeStore not found)'), 'Unavailable modules are shown as unknown, not defaulted');
+assert.ok(lines.includes('painted colors: unknown (not measured by this plugin)'));
+const recapture = screen.children.find(n => n?.type === 'Button' && n.props.title === 'Recapture theme sources');
+assert.ok(recapture, 'Recapture button must exist');
+const sourcesBox = stateSetters.at(-1), firstCapture = sourcesBox[0];
+recapture.props.onPress();
+assert.notEqual(sourcesBox[0], firstCapture, 'Recapture must take a fresh snapshot');
+assert.equal(JSON.stringify(storage), storageBefore, 'Diagnostics must not write plugin storage');
+assert.equal(f.store.gradientPreset, presetBefore, 'Diagnostics must not change the gradient');
 f.modules[0].resetBackgroundGradientPreset();
 life.change('background'); await clock.advance(60000);
 assert.equal(f.store.gradientPreset, null);

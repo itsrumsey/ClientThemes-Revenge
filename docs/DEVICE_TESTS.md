@@ -31,3 +31,9 @@ The original plugin unlocks gradients on the user's exact 349.9 device; the earl
 4. Select a gradient in the native picker; check that it applies without forcing default/sync. Test explicit/default choices and the legacy picker fallback where the newer save handler is unavailable.
 5. Only then test cold restore, force-stop, foreground, navigation and simulated drift.
 6. Disable: verify guards/listeners/timers stop. If the previous sync setting was readable it should be restored; otherwise manually choose the desired sync preference while the plugin is disabled. Reenable and verify original local sync-disable behavior and selectable gradients return.
+
+## Theme Sources diagnostics (cold-start partial theming)
+
+E1 confirmed on the device: after a cold start the sidebar/account bar keep the gradient while the DM panel is black; reselecting preset 11 in ClientThemes Revived settings does not repair it, while reselecting it in Discord's native picker repairs it immediately. The plugin path only dispatches the gradient preset; the native path also resets the custom theme, saves local appearance settings (preset ID and base theme) and turns off system-theme following.
+
+The settings page now has a read-only **Theme Sources** section, captured when the page opens and on **Recapture theme sources**. Screenshot it in the broken state, repair with the native picker, recapture and screenshot again. Rows show values exactly as read (`null`, `undefined`, strings quoted); `unknown (reason)` means the value could not be read. The status line above does not verify these values, and painted colors are never measured.
