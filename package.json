@@ -1,7 +1,9 @@
 {
   "private": true,
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "test": "node --test tests/*.test.js",
+    "check:bundle": "node scripts/check-bundle.mjs"
   },
   "dependencies": {
     "@swc/helpers": "0.5.3"
@@ -17,5 +19,9 @@
   },
   "name": "clientthemes-revenge",
   "version": "0.1.0",
-  "license": "GPL-3.0"
+  "license": "GPL-3.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  }
 }

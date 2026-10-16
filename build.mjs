@@ -44,7 +44,11 @@ for (let plug of await readdir("./plugins")) {
     try {
         const bundle = await rollup({
             input: `./plugins/${plug}/${manifest.main}`,
-            onwarn: () => { },
+            external: id => id.startsWith("@vendetta/"),
+            onwarn(warning, warn) {
+                if (warning.code === "UNRESOLVED_IMPORT") throw new Error(warning.message)
+                warn(warning)
+            },
             plugins,
         })
 
@@ -59,6 +63,7 @@ for (let plug of await readdir("./plugins")) {
                 return map[id] || null
             },
             format: "iife",
+            banner: "/* ClientThemes by sapphire/aeongdesu; credits m4fn3/FreeNitroTheme. GPL-3.0; see LICENSE. */",
             compact: true,
             exports: "named",
         })

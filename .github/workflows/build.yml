@@ -1,4 +1,4 @@
-name: Build
+name: Build and test
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
@@ -9,18 +9,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-      - run: npm install
+          node-version: '22.23.3'
+          cache: npm
+      - run: npm ci
+      - run: npm test
       - run: npm run build
-      - name: Preserve dependency lock for baseline verification
+      - run: npm run check:bundle
+      - name: Package review artifact
         run: |
-          echo LOCKFILE_START
-          cat package-lock.json
-          echo LOCKFILE_END
+          cp LICENSE README.md dist/ClientThemes/
+          cp PROJECT_STATUS.md dist/ClientThemes/
       - uses: actions/upload-artifact@v4
         with:
-          name: ClientThemes-baseline
-          path: |
-            dist/ClientThemes/
-            package-lock.json
-            LICENSE
+          name: ClientThemes-review-${{ github.sha }}
+          if-no-files-found: error
+          path: dist/ClientThemes/
