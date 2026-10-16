@@ -5,7 +5,7 @@ import { validId } from './state.js';
 export function createFeatures({ metro, patcher, storage, selected, log = () => {} }) {
     const disposers = [], installed = new Set(), errors = {};
     let disposed = false, lastReport = '', syncConfirmed = false, restoring = false;
-    let pendingCustom = false, observedPreset = null;
+    let pendingCustom = false, observedPreset = null, explicitPickerUsed = false;
     function attempt(name, install) {
         if (installed.has(name)) return;
         const start = disposers.length;
@@ -38,9 +38,9 @@ export function createFeatures({ metro, patcher, storage, selected, log = () => 
         const descriptor = args[0];
         if (!descriptor || typeof descriptor !== 'object' || restoring) return;
         // Native descriptors carry a preset ID; no catalog/token lookup is needed to save intent.
-        if (validId(descriptor.id)) selected(descriptor.id);
+        if (validId(descriptor.id)) { explicitPickerUsed = true; selected(descriptor.id); }
         else if (['light', 'dark', 'ash', 'onyx', 'system'].includes(descriptor.theme)
-            || descriptor.customThemeSettings != null) selected(null);
+            || descriptor.customThemeSettings != null) { explicitPickerUsed = true; selected(null); }
     }
     return {
         refresh() {
@@ -100,9 +100,10 @@ export function createFeatures({ metro, patcher, storage, selected, log = () => 
             attempt('legacyPicker', () => {
                 const target = requireMethod(metro.findByProps('updateBackgroundGradientPreset'), 'updateBackgroundGradientPreset');
                 requireMethod(target, 'updateMobilePendingThemeIndex');
-                // Original index convention is used only when explicit native save hooks are absent.
+                // Prefer a newer handler only after it has actually captured a choice.
+                // Export presence alone does not establish which picker this device uses.
                 disposers.push(patcher.after('updateMobilePendingThemeIndex', target, ([index]) => {
-                    if (restoring || installed.has('explicitPicker') || !Number.isFinite(index)) return;
+                    if (restoring || explicitPickerUsed || !Number.isFinite(index)) return;
                     pendingCustom = index > 1;
                     if (!pendingCustom) selected(null);
                     else {
@@ -111,7 +112,7 @@ export function createFeatures({ metro, patcher, storage, selected, log = () => 
                     }
                 }));
                 disposers.push(patcher.after('updateBackgroundGradientPreset', target, ([id]) => {
-                        if (restoring || installed.has('explicitPicker')) return;
+                        if (restoring || explicitPickerUsed) return;
                         observedPreset = validId(id) ? id : null;
                         if (pendingCustom && validId(id)) { pendingCustom = false; selected(id); }
                     }));

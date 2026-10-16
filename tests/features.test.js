@@ -120,3 +120,13 @@ test('async sync disable must finish before the feature is reported ready; failu
         f.close();
     }
 });
+
+test('legacy picker remains functional when newer save export exists but is never called', () => {
+    const f = fixture(); f.features.refresh();
+    f.modules[0].updateMobilePendingThemeIndex(2);
+    f.modules[0].updateBackgroundGradientPreset(4);
+    assert.deepEqual(f.selections, [4]);
+    f.modules[3].handleSaveTheme({ id: 0 });
+    f.modules[0].updateMobilePendingThemeIndex(0);
+    assert.deepEqual(f.selections, [4, 0]); f.close();
+});
