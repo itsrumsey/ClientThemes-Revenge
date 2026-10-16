@@ -70,7 +70,7 @@ The fork saves explicit theme choices separately from Discord's underlying appea
 
 Native light/dark/system choices and the custom color editor relinquish the gradient override. “Follow Discord appearance” in plugin settings also disables restoration without deleting the last preset. This plugin preserves the original local gradient unlock and supports Discord's gradient presets; it does not implement a new custom color editor or replace Revenge JSON themes.
 
-Look for `[ClientThemes 0.1.0]` logs. Missing modules, renamed/removed presets or unresolved tokens preserve the saved selection and report a suspended/unsupported state. Normal healthy verification is quiet. Live store confirmation cannot prove every screen's painted colors; device checks are still required.
+Look for `[ClientThemes 0.1.0]` logs. Missing modules, renamed/removed presets or unresolved tokens preserve the saved selection and report a suspended/unsupported state. Normal `gradient-restored` verification is quiet. "Gradient restored" confirms the gradient store only; it cannot prove every screen's painted colors, so device checks are still required.
 
 Updating at the same URL preserves state. Disabling removes timers, listeners and patches, but does not clear your selection or force a different Discord theme. For original-plugin feature parity, enabling this preview calls `setShouldSyncAppearanceSettings(false)` and suppresses subsequent sync setter calls while enabled, even with no saved preset. Disable the plugin to change appearance sync. On unload, a readable pre-plugin sync preference is restored; if that preference cannot be read, it is left unguessed and sync may remain off, as with the original plugin.
 
@@ -80,6 +80,12 @@ The user reports that the original plugin unlocks gradients on the target device
 
 The corrected preview installs the original `canUseClientThemes`, experiment and appearance-sync patches immediately on load, independently of AppState and recovery-only modules. Explicit native picker capture is also independent; until an explicit save callback is actually observed, the original pending-index/preset hooks remain active. An export merely existing does not prove that the device uses it. A missing gradient reader/catalog can suspend automatic restoration without disabling native gradient selection. Recovery's own writes are excluded from selection capture.
 
-Check the plugin settings' separate **Unlock** status and `[ClientThemes 0.1.0] unlock-ready` / `unlock-unavailable` diagnostics. Missing features include exact capability and lookup/patch errors. Matching gradient state is no longer reported healthy when required unlock/picker capabilities are missing. If recovery-only modules are unavailable, their separate retry/suspended diagnostics do not mean the installed unlock patches have been removed.
+Check the plugin settings' separate **Unlock** status and `[ClientThemes 0.1.0] unlock-ready` / `unlock-unavailable` diagnostics. Missing features include exact capability and lookup/patch errors. Matching gradient state is not reported as gradient-restored when required unlock/picker capabilities are missing. If recovery-only modules are unavailable, their separate retry/suspended diagnostics do not mean the installed unlock patches have been removed.
 
 Update at the same URL, keep the original disabled, restart Discord with updates enabled, and test whether the native picker now exposes selectable gradients before testing saved-theme restoration. Please report the Unlock status and missing capability names if it does not. Automated feature-parity tests are not confirmation of real-device success.
+
+## Compatibility: Revenge color themes
+
+Do not use ClientThemes Revived together with a Revenge color theme (**Settings → Revenge → Themes**). When a Revenge color theme is applied, Revenge switches Discord's base theme to its own `bn-theme-<n>` key and supplies its own surface colors, which override Discord's gradient surface colors. The result is partial theming: the gradient still shows on the server sidebar and account bar, while panels such as Direct Messages stay dark. Discord's own picker repairs it only until the next restart, because Revenge re-applies its theme at startup.
+
+Choose either a Revenge color theme or a ClientThemes gradient. The plugin settings show a warning when a Revenge color theme is active; the plugin never changes or disables Revenge themes. **Show diagnostics** in the plugin settings lists the theme sources it reads (read-only) and can be recaptured at any time.

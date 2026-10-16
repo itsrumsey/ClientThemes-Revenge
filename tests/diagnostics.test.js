@@ -128,3 +128,52 @@ test('formatValue distinguishes null, undefined, strings, numbers and objects', 
     assert.equal(formatValue({ known: true, value: { backgroundGradientPresetId: 11 } }), '{"backgroundGradientPresetId":11}');
     assert.equal(formatValue({ known: false, reason: 'x' }), 'unknown (x)');
 });
+
+// Revenge color-theme conflict: the live bn-theme-* override is decisive; selection records are supporting.
+const revenge = (selected, stored = selected) => ({
+    themes: { a: { id: 'a', selected: selected === 'a', data: { name: 'Night Sky' } }, b: { id: 'b', selected: false, data: {} } },
+    getCurrentTheme: () => stored === 'a' ? { id: 'a', data: { name: 'Night Sky' } } : null
+});
+const withBaseTheme = theme => discord({ overrides: { stores: { ThemeStore: { theme, systemTheme: 'dark',
+    isSameAsDeviceThemeEnabled: () => false, getSyncedClientTheme: () => undefined } } } });
+
+test('active conflict: Revenge override applied to the base theme', () => {
+    const d = withBaseTheme('bn-theme-3');
+    const themes = revenge('a'); const before = JSON.stringify(themes.themes);
+    const capture = createThemeSources({ metro: d.metro, storage: {}, revengeThemes: themes }).capture();
+    assert.equal(capture.conflict, 'active');
+    assert.equal(valueOf(capture, 'override applied (ThemeStore.theme is bn-theme-*)').value, true);
+    assert.equal(valueOf(capture, 'selected in Revenge Themes').value, 'Night Sky');
+    assert.equal(valueOf(capture, 'loader theme at startup').value, 'Night Sky');
+    assert.equal(JSON.stringify(themes.themes), before, 'Revenge theme records untouched');
+    assert.deepEqual(d.writes, []); assert.deepEqual(d.dispatches, []);
+});
+
+test('the bn-theme prefix alone is decisive even if Revenge selection records are unreadable', () => {
+    const capture = createThemeSources({ metro: withBaseTheme('bn-theme-7').metro, storage: {} }).capture();
+    assert.equal(capture.conflict, 'active');
+    assert.match(formatValue(valueOf(capture, 'selected in Revenge Themes')), /unknown \(Revenge theme list unavailable\)/);
+    assert.match(formatValue(valueOf(capture, 'loader theme at startup')), /unknown \(Revenge theme API unavailable\)/);
+});
+
+test('selected but not applied (e.g. safe mode or pending restart) is not reported as active', () => {
+    const capture = createThemeSources({ metro: withBaseTheme('darker').metro, storage: {}, revengeThemes: revenge('a') }).capture();
+    assert.equal(capture.conflict, 'selected');
+    assert.equal(valueOf(capture, 'override applied (ThemeStore.theme is bn-theme-*)').value, false);
+});
+
+test('a stale loader theme with nothing selected and no override is no conflict', () => {
+    const capture = createThemeSources({ metro: withBaseTheme('darker').metro, storage: {}, revengeThemes: revenge(null, 'a') }).capture();
+    assert.equal(capture.conflict, 'none');
+    assert.equal(valueOf(capture, 'selected in Revenge Themes').value, null);
+    assert.equal(valueOf(capture, 'loader theme at startup').value, 'Night Sky');
+});
+
+test('conflict is unknown when the base theme cannot be read, never guessed', () => {
+    const d = discord({ omit: ['ThemeStore'] });
+    const capture = createThemeSources({ metro: d.metro, storage: {}, revengeThemes: revenge('a') }).capture();
+    assert.equal(capture.conflict, 'unknown');
+    assert.match(formatValue(valueOf(capture, 'override applied (ThemeStore.theme is bn-theme-*)')), /ThemeStore not found/);
+    const odd = createThemeSources({ metro: withBaseTheme(undefined).metro, storage: {} }).capture();
+    assert.equal(odd.conflict, 'unknown');
+});

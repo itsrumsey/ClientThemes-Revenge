@@ -99,7 +99,7 @@ export function createController({ storage, resolve, lifecycle, log = () => {},
             if (!actual.known) throw new Error(actual.reason || "Live gradient is unreadable");
             if (actual.matches) {
                 failures = 0; notBefore = 0;
-                report("healthy", { presetId: selection.presetId });
+                report("gradient-restored", { presetId: selection.presetId });
                 return;
             }
             writes = writes.filter(t => clock.now() - t < 60000);
@@ -130,7 +130,7 @@ export function createController({ storage, resolve, lifecycle, log = () => {},
             const applied = session.read(selection.presetId);
             if (write.settled && applied.known && applied.matches) {
                 confirmation = null; failures = 0; notBefore = 0;
-                report("healthy", { presetId: selection.presetId });
+                report("gradient-restored", { presetId: selection.presetId });
             } else report("confirming", { presetId: selection.presetId });
         } catch (e) {
             if (running && token === generation) fail(e);

@@ -28,7 +28,13 @@ export function formatValue(entry) {
     try { return JSON.stringify(value); } catch { return String(value); }
 }
 
-export function createThemeSources({ metro, storage, now = () => Date.now() }) {
+// Revenge's color-theme engine (revenge-bundle 1b1d297, src/lib/addons/themes/colors) applies a selected
+// theme by switching Discord's base theme to a generated `bn-theme-<n>` key and resolving surface colors
+// itself. Its storage patch rewrites that key back to a Discord theme before persisting, so the prefix is
+// only present while Revenge's override is applied in this session, not as stale saved state.
+export const REVENGE_THEME_PREFIX = 'bn-theme-';
+
+export function createThemeSources({ metro, storage, revengeThemes, now = () => Date.now() }) {
     function find(kind, key) {
         try {
             const found = kind === 'store' ? metro.findByStoreName(key) : metro.findByProps(key);
@@ -111,8 +117,37 @@ export function createThemeSources({ metro, storage, now = () => Date.now() }) {
                 return value instanceof Unknown ? value : value !== undefined;
             });
 
+            // Revenge color theme: the live override (decisive) plus Revenge's own selection records.
+            const baseTheme = rows.find(r => r.group === 'Base theme (ThemeStore)' && r.label === 'theme');
+            const override = !baseTheme.known ? unknown(baseTheme.reason)
+                : typeof baseTheme.value === 'string' ? baseTheme.value.startsWith(REVENGE_THEME_PREFIX)
+                : unknown(`ThemeStore.theme is ${formatValue(baseTheme)}`);
+            add('Revenge color theme', 'override applied (ThemeStore.theme is bn-theme-*)', () => override);
+            const selected = (() => {
+                try {
+                    const installed = revengeThemes?.themes;
+                    if (installed == null || typeof installed !== 'object') return unknown('Revenge theme list unavailable');
+                    const entry = Object.values(installed).find(t => t?.selected === true);
+                    return entry ? (entry.data?.name ?? entry.id ?? 'unnamed theme') : null;
+                } catch (error) { return unknown(`read failed: ${String(error)}`); }
+            })();
+            add('Revenge color theme', 'selected in Revenge Themes', () => selected);
+            add('Revenge color theme', 'loader theme at startup', () => {
+                const stored = call(revengeThemes ?? unknown('Revenge theme API unavailable'), 'getCurrentTheme', 'Revenge themes');
+                return stored instanceof Unknown || stored == null ? stored : (stored.data?.name ?? stored.id ?? 'unnamed theme');
+            });
+
             add('Rendering', 'painted colors', () => unknown('not measured by this plugin'));
-            return { capturedAt: now(), rows };
+            return { capturedAt: now(), rows, conflict: classifyConflict(override, selected) };
         }
     };
+}
+
+// active: Revenge is overriding surface colors now. selected: a Revenge theme is selected but not applied
+// (for example safe mode, or until restart). none: neither. unknown: the override could not be read.
+function classifyConflict(override, selected) {
+    if (override === true) return 'active';
+    if (override instanceof Unknown) return 'unknown';
+    if (typeof selected === 'string') return 'selected';
+    return 'none';
 }

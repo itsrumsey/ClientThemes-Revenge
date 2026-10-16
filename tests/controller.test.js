@@ -33,7 +33,7 @@ test('cold start restores once, verifies live state, and remains idempotent', as
     const f = fixture(); f.control.start(); f.control.start();
     await f.clock.advance(30000);
     assert.equal(f.calls, 1); assert.equal(f.resolves, 1);
-    assert.equal(f.control.inspect().status, 'healthy');
+    assert.equal(f.control.inspect().status, 'gradient-restored');
     await f.clock.advance(120000); assert.equal(f.calls, 1);
     f.control.stop();
 });
@@ -165,7 +165,7 @@ test('unload during unknown startup cancels every probe', async () => {
 test('synchronous application confirms immediately without recording a failure', async () => {
     const f = fixture(); f.session.apply = id => { f.session.read = () => ({ known: true, matches: true, presetId: id }); };
     f.control.start(); await f.clock.advance(0);
-    assert.equal(f.control.inspect().status, 'healthy'); assert.equal(f.control.inspect().failures, 0);
+    assert.equal(f.control.inspect().status, 'gradient-restored'); assert.equal(f.control.inspect().failures, 0);
     assert.equal(f.events.some(([e]) => e === 'retrying'), false); f.control.stop();
 });
 test('void dispatch with delayed store update confirms without repeated writes or failures', async () => {
@@ -174,7 +174,7 @@ test('void dispatch with delayed store update confirms without repeated writes o
     f.session.apply = () => { writes++; f.clock.set(() => { matches = true; f.reset(); }, 3000); };
     f.control.start(); await f.clock.advance(2999);
     assert.equal(writes, 1); assert.equal(f.control.inspect().failures, 0);
-    await f.clock.advance(1000); assert.equal(f.control.inspect().status, 'healthy');
+    await f.clock.advance(1000); assert.equal(f.control.inspect().status, 'gradient-restored');
     assert.equal(writes, 1); assert.equal(f.control.inspect().failures, 0); f.control.stop();
 });
 test('delayed Promise application is serialized and an unsettled Promise trips the circuit', async () => {
@@ -186,7 +186,7 @@ test('delayed Promise application is serialized and an unsettled Promise trips t
         }); };
         f.control.start(); await f.clock.advance(6000);
         assert.equal(writes, 1);
-        assert.equal(f.control.inspect().status, settles ? 'healthy' : 'suspended');
+        assert.equal(f.control.inspect().status, settles ? 'gradient-restored' : 'suspended');
         if (!settles) assert.equal(f.clock.count(), 0);
         f.control.stop();
     }
@@ -203,12 +203,12 @@ test('unload and background suppress confirmation work; late Promise rejection i
     assert.equal(g.clock.count(), 0); assert.equal(g.disposed, 1);
 });
 
-test('a matching restored gradient cannot report healthy when entitlement or picker is unavailable', async () => {
+test('a matching restored gradient cannot report gradient-restored when entitlement or picker is unavailable', async () => {
     const f = fixture();
     f.session.featureStatus = () => ({ ready: false, missing: ['entitlement'], capabilities: { entitlement: false } });
     f.session.read = () => ({ known: true, matches: true });
     f.control.start(); await f.clock.advance(120000);
     assert.equal(f.calls, 0); assert.equal(f.control.inspect().status, 'suspended');
     assert.ok(f.events.some(([event]) => event === 'unlock-unavailable'));
-    assert.equal(f.events.some(([event]) => event === 'healthy'), false); f.control.stop();
+    assert.equal(f.events.some(([event]) => event === 'gradient-restored'), false); f.control.stop();
 });

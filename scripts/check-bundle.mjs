@@ -19,10 +19,16 @@ assert.match(bytes.toString(), /GPL-3\.0/);
 const f = fixture(), clock = fakeClock(), life = lifecycle();
 const storage = { isEnabled: true, theme: 0 };
 // Minimal React/RN stand-ins so the compiled settings() screen can be rendered once.
-const stateSetters = [];
+// Hook state persists across renders by call order, like React.
+const hookState = []; let hookIndex = 0;
+const render = component => { hookIndex = 0; return component(); };
 const ReactStub = {
     useReducer: () => [0, () => {}],
-    useState: init => { const box = [typeof init === 'function' ? init() : init, next => { box[0] = next; }]; stateSetters.push(box); return box; },
+    useState: init => {
+        const i = hookIndex++;
+        if (!(i in hookState)) hookState[i] = typeof init === 'function' ? init() : init;
+        return [hookState[i], next => { hookState[i] = next; }];
+    },
     createElement: (type, props, ...children) => ({ type, props: props ?? {}, children: children.flat() })
 };
 f.metro.common = { React: ReactStub, ReactNative: { ScrollView: 'ScrollView', Text: 'Text', Button: 'Button', useColorScheme: () => 'dark', AppState: {
@@ -47,18 +53,26 @@ assert.equal(life.count(), 1);
 // Theme Sources: rendering the compiled settings screen captures read-only diagnostics.
 const texts = node => node == null || typeof node !== 'object' ? (node == null ? [] : [String(node)]) : node.children.flatMap(texts);
 const storageBefore = JSON.stringify(storage), presetBefore = f.store.gradientPreset;
-const screen = plugin.settings();
-const lines = texts(screen);
-assert.ok(lines.includes('Theme Sources'), 'Settings must render the Theme Sources section');
+const button = (node, title) => node.children.find(n => n?.type === 'Button' && n.props.title === title);
+let screen = render(plugin.settings);
+let lines = texts(screen);
+assert.ok(lines.some(l => l.includes('Status: Gradient restored (gradient store only; rendered colors not verified)')), 'Precise status label');
+assert.ok(!lines.includes('Theme Sources'), 'Diagnostics are collapsed by default');
+assert.ok(!lines.some(l => l.startsWith('Warning: a Revenge color theme is active')), 'No conflict warning without a Revenge override');
+button(screen, 'Show diagnostics').props.onPress();
+screen = render(plugin.settings); lines = texts(screen);
+assert.ok(lines.includes('Theme Sources'), 'Show diagnostics expands Theme Sources');
 assert.ok(lines.includes('gradientPreset.id: 0'), 'Gradient store value is shown explicitly');
 assert.ok(lines.includes('saved selection.presetId: 0'));
 assert.ok(lines.includes('theme: unknown (ThemeStore not found)'), 'Unavailable modules are shown as unknown, not defaulted');
+assert.ok(lines.includes('selected in Revenge Themes: unknown (Revenge theme list unavailable)'));
 assert.ok(lines.includes('painted colors: unknown (not measured by this plugin)'));
-const recapture = screen.children.find(n => n?.type === 'Button' && n.props.title === 'Recapture theme sources');
-assert.ok(recapture, 'Recapture button must exist');
-const sourcesBox = stateSetters.at(-1), firstCapture = sourcesBox[0];
-recapture.props.onPress();
-assert.notEqual(sourcesBox[0], firstCapture, 'Recapture must take a fresh snapshot');
+const firstCapture = hookState[0];
+button(screen, 'Recapture theme sources').props.onPress();
+assert.notEqual(hookState[0], firstCapture, 'Recapture must take a fresh snapshot');
+screen = render(plugin.settings);
+button(screen, 'Hide diagnostics').props.onPress();
+assert.ok(!texts(render(plugin.settings)).includes('Theme Sources'), 'Hide diagnostics collapses the section');
 assert.equal(JSON.stringify(storage), storageBefore, 'Diagnostics must not write plugin storage');
 assert.equal(f.store.gradientPreset, presetBefore, 'Diagnostics must not change the gradient');
 f.modules[0].resetBackgroundGradientPreset();
@@ -94,6 +108,30 @@ degraded.modules[0].updateBackgroundGradientPreset(4);
 assert.equal(degradedStorage.selection.presetId, 4, 'Legacy picker must save selection without restoration contracts');
 degradedPlugin.onUnload();
 assert.equal(degraded.patches, 0); assert.equal(degradedClock.count(), 0); assert.equal(unknownLife.count(), 0);
+// Active Revenge color theme: the settings screen warns, and never changes Revenge's theme state.
+const conflicted = fixture(), conflictClock = fakeClock(), conflictLife = lifecycle();
+const revengeThemes = { themes: { 'https://example.invalid/t.json': { id: 'https://example.invalid/t.json', selected: true, data: { name: 'Night Sky' } } },
+    getCurrentTheme() { return this.themes['https://example.invalid/t.json']; }, selectTheme() { throw Error('Must not select Revenge themes'); } };
+const revengeBefore = JSON.stringify(revengeThemes.themes);
+const findStore = conflicted.metro.findByStoreName;
+conflicted.metro.findByStoreName = name => name === 'ThemeStore' ? { theme: 'bn-theme-3', systemTheme: 'dark' } : findStore(name);
+hookState.length = 0;
+conflicted.metro.common = { React: ReactStub, ReactNative: { ScrollView: 'ScrollView', Text: 'Text', Button: 'Button', useColorScheme: () => 'dark', AppState: {
+    get currentState() { return conflictLife.current(); },
+    addEventListener(_, cb) { return { remove: conflictLife.subscribe(cb) }; }
+} } };
+const conflictPlugin = evaluateLikeRevenge(bytes.toString(), { metro: conflicted.metro, patcher: conflicted.patcher, plugin: { storage: { isEnabled: true, theme: 0 } }, themes: revengeThemes }, {
+    console: { info() {}, error(...args) { throw Error(args.join(' ')); } },
+    Date: class extends Date { static now() { return conflictClock.now(); } },
+    setTimeout: conflictClock.set, clearTimeout: conflictClock.clear
+});
+conflictPlugin.onLoad(); await conflictClock.advance(1000);
+const conflictLines = texts(render(conflictPlugin.settings));
+assert.ok(conflictLines.some(l => l.startsWith('Warning: a Revenge color theme is active.') && l.includes('can override Discord gradient surface colors')),
+    'An applied Revenge color theme must show the conflict warning');
+assert.equal(JSON.stringify(revengeThemes.themes), revengeBefore, 'Revenge theme selection must not be modified');
+conflictPlugin.onUnload();
+assert.equal(conflicted.patches, 0); assert.equal(conflictClock.count(), 0);
 // Same input and lockfile must produce byte-identical artifacts on the same runner.
 execFileSync(process.execPath, ['build.mjs'], { stdio: 'inherit' });
 assert.deepEqual(await readFile(path + 'index.js'), bytes);

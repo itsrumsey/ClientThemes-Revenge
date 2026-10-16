@@ -67,3 +67,16 @@ Forty-one unit cases pass locally, including twelve independent feature tests an
 ## Theme Sources diagnostics
 
 Read-only diagnostics added to the settings page to compare the broken cold-start state with the state after a native-picker repair. They read ClientThemesBackgroundStore, the preset catalog, ThemeStore, SelectivelySyncedUserSettingsStore (local appearance settings and sync state), UnsyncedUserSettingsStore (system-theme following) and CustomThemeMobileStore through store getters only; nothing is dispatched, saved, patched or subscribed, and lookups run only when the page opens or on recapture. Restoration, startup, entitlement and native picker behavior are unchanged. Unit tests cover full, missing and partially available modules and assert no writes; the compiled-bundle check renders the settings screen. **Device results pending.**
+
+## Revenge color-theme conflict (device-confirmed)
+
+Theme Sources on the device showed the cold-start partial theming (gradient on the sidebar and account bar, dark DM panel) had every gradient-store value correct; only the base theme differed: `"bn-theme-3"` when broken, `"darker"` after a native-picker repair. `bn-theme-<n>` is Revenge's own color-theme key (revenge-bundle 1b1d297, `src/lib/addons/themes/colors`), applied at startup and used to override Discord's semantic surface colors. With the Revenge color theme disabled, **one clean cold start** restored full gradient theming. The cause is the Revenge theme conflict, not the restoration controller. See docs/DEVICE_TESTS.md for the before/after values.
+
+**Not yet verified:** long-term restoration reliability. Repeated cold starts, force-stops, background/foreground, navigation and disable/reenable remain pending with the Revenge theme disabled.
+
+Follow-up changes (no restoration, startup, entitlement or picker behavior changed; no theme switching, forced base theme or periodic refresh):
+
+- Settings show a read-only warning when a Revenge color theme is applied (`ThemeStore.theme` starts with `bn-theme-`), with Revenge's selection and loader theme as supporting diagnostics. The plugin never modifies Revenge themes.
+- Controller status `healthy` is renamed `gradient-restored`, displayed as "Gradient restored (gradient store only; rendered colors not verified)". Earlier sections of this file that say "healthy" refer to this status.
+- Theme Sources diagnostics are kept behind a collapsed-by-default **Show diagnostics** section with manual recapture.
+- README documents that Revenge color themes and ClientThemes Revived should not be used together.
