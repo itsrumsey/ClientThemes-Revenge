@@ -1,6 +1,6 @@
 # Physical-device verification
 
-Status: **not performed**. No Android device or exact Discord 349009 runtime is connected.
+Status: **partially performed** on the user's device (results sections below). Automated checks never count as device results.
 
 Target: Revenge 1b1d297-main (1.11.6), Discord Android 349.9 (349009), React 19.2.3, React Native 0.86.0, RevengeXposed 1.6.3, Android 16 / SDK 36. Record the actual versions for every run. Test without competing theme plugins first, then test combinations separately.
 
@@ -81,3 +81,11 @@ Install `https://itsrumsey.github.io/ClientThemes-Revenge/HideQuests/` as a sepa
 3. Navigate tabs, open DMs and servers: no crash, no empty space.
 4. Disable the plugin, restart: the banner returns. Re-enable: it disappears again.
 5. Confirm ClientThemes Revived (gradient, base theme, cold start) is unaffected with both plugins enabled.
+
+### Result: base theme with gradients passed (2026-10-17)
+
+The user selected Onyx with their gradient preset: settings use the Onyx base while the gradient stays, both after a cold open and when changed mid-use. Remaining: light-preset behavior, Discord default reset, and repeated force-stops.
+
+### Result: Hide Quests first preview crashed (2026-10-17)
+
+After enabling Hide Quests and pressing back to the conversation list, Discord 349.9 showed "Cannot read property 'type' of null" in `getQuestDockQuest` (call stack through the Hide Quests bundle). Cause: the preview replaced `useMobileQuestDock()` with `null`, and Discord passes that value to `useIsMobileQuestDockRenderedBase(creative)` → `getQuestDockQuest(creative)`, which reads `creative.type` unguarded. Fix: `useMobileQuestDock` is no longer patched; only `getIsEligibleForQuests`, `useIsMobileQuestDockRenderedBase` and `useIsMobileQuestDockRendered` change their results. **Retest pending:** update Hide Quests, enable it, press back to conversations, switch tabs, and restart; then run the Hide Quests checklist above.

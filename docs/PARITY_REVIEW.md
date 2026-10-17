@@ -28,3 +28,7 @@ Restore the original canUseClientThemes, appearance-sync and experiment patches 
 Missing feature contracts must be visible as unlock-unavailable, with exact lookup/patch errors. A verified live gradient alone cannot qualify as healthy if the unlock feature is missing. Reapply neither entitlement nor experiment patches repeatedly once installed; unload must remove both feature and recovery resources.
 
 A newer native save export can exist without being used by the active picker. The original picker hooks remain active until a recognized explicit save callback is observed; export availability alone cannot suppress the working reference path. A regression test covers that case.
+
+## Later additions beyond parity
+
+Features added after parity was restored are optional additions, not original ClientThemes behavior: read-only Theme Sources diagnostics, the Revenge color-theme conflict warning, the "Gradient restored" status wording, and the base theme with gradients option (off by default). Hide Quests is a separate plugin in the same repository with its own install URL. The original unlock, sync and experiment patches described above are unchanged.

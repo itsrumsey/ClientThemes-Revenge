@@ -22,9 +22,15 @@ function discord({ omit = [] } = {}) {
     const calls = {};
     const counted = (name, value) => function () { calls[name] = (calls[name] ?? 0) + 1; return value; };
     const eligibility = { getIsEligibleForQuests: counted('getIsEligibleForQuests', true) };
+    // Faithful to Discord: AdCreativeUtils.getQuestDockQuest reads `creative.type` without a null check, and
+    // useIsMobileQuestDockRenderedBase(creative) calls it on whatever the You bar passes in.
+    const getQuestDockQuest = creative => creative.type === 1 ? creative.quest : null;
     const hooks = {
         useMobileQuestDock: counted('useMobileQuestDock', { type: 1, quest: { id: 'visionquest' } }),
-        useIsMobileQuestDockRenderedBase: counted('useIsMobileQuestDockRenderedBase', true),
+        useIsMobileQuestDockRenderedBase: function (creative) {
+            calls.useIsMobileQuestDockRenderedBase = (calls.useIsMobileQuestDockRenderedBase ?? 0) + 1;
+            return getQuestDockQuest(creative) != null;
+        },
         useIsMobileQuestDockRendered: counted('useIsMobileQuestDockRendered', true)
     };
     for (const key of omit) { delete eligibility[key]; delete hooks[key]; }
@@ -33,18 +39,17 @@ function discord({ omit = [] } = {}) {
     return { calls, eligibility, hooks, metro, modules };
 }
 
-test('all four Discord gates return "no quests" while the originals still run', () => {
+test('all three Discord gates return "no quests" while the originals still run', () => {
     const d = discord(), patcher = patcherSpy(), clock = fakeClock();
     const hider = createHideQuests({ metro: d.metro, patcher, clock });
     hider.start();
     assert.equal(d.eligibility.getIsEligibleForQuests(), false);
-    assert.equal(d.hooks.useMobileQuestDock(), null);
-    assert.equal(d.hooks.useIsMobileQuestDockRenderedBase({ type: 1 }), false);
+    assert.equal(d.hooks.useIsMobileQuestDockRenderedBase({ type: 1, quest: {} }), false);
     assert.equal(d.hooks.useIsMobileQuestDockRendered(), false);
-    assert.deepEqual(d.calls, { getIsEligibleForQuests: 1, useMobileQuestDock: 1,
+    assert.deepEqual(d.calls, { getIsEligibleForQuests: 1,
         useIsMobileQuestDockRenderedBase: 1, useIsMobileQuestDockRendered: 1 }, 'originals always called: hook order unchanged');
     assert.deepEqual(hider.status(), { active: true, complete: true, installed: PATCHES.map(p => p.name), missing: [], errors: {}, retrying: false });
-    assert.equal(patcher.active, 4);
+    assert.equal(patcher.active, 3);
     assert.equal(clock.count(), 0, 'no timers when everything is found');
     hider.dispose();
 });
@@ -83,14 +88,14 @@ test('a missing module is reported, the rest still apply, and retries are bounde
 });
 
 test('a module that initializes later is picked up by the retry', async () => {
-    const d = discord({ omit: ['useMobileQuestDock'] }), patcher = patcherSpy(), clock = fakeClock();
+    const d = discord({ omit: ['useIsMobileQuestDockRendered'] }), patcher = patcherSpy(), clock = fakeClock();
     const hider = createHideQuests({ metro: d.metro, patcher, clock });
     hider.start();
-    assert.deepEqual(hider.status().missing, ['dockCreative']);
-    d.hooks.useMobileQuestDock = () => ({ type: 1 });
+    assert.deepEqual(hider.status().missing, ['dockRendered']);
+    d.hooks.useIsMobileQuestDockRendered = () => true;
     await clock.advance(250);
     assert.equal(hider.status().complete, true);
-    assert.equal(d.hooks.useMobileQuestDock(), null);
+    assert.equal(d.hooks.useIsMobileQuestDockRendered(), false);
     assert.equal(clock.count(), 0);
     hider.dispose();
 });
@@ -115,6 +120,21 @@ test('a throwing lookup is contained per patch', () => {
     hider.start();
     assert.equal(hider.status().active, false);
     assert.match(hider.status().errors.eligibility, /boom/);
-    assert.equal(d.hooks.useMobileQuestDock(), null, 'other patches unaffected');
+    assert.equal(d.hooks.useIsMobileQuestDockRendered(), false, 'other patches unaffected');
+    hider.dispose();
+});
+
+test('regression (Discord 349.9 crash): the You bar flow never hands Discord a null creative', () => {
+    const d = discord(), patcher = patcherSpy(), clock = fakeClock();
+    const creativeBefore = d.hooks.useMobileQuestDock();
+    const hider = createHideQuests({ metro: d.metro, patcher, clock });
+    hider.start();
+    // YouBar.tsx / QuestDock.tsx: useIsMobileQuestDockRenderedBase(useMobileQuestDock())
+    const creative = d.hooks.useMobileQuestDock();
+    assert.deepEqual(creative, creativeBefore, 'useMobileQuestDock is not patched; its real object reaches Discord code');
+    assert.doesNotThrow(() => d.hooks.useIsMobileQuestDockRenderedBase(creative));
+    assert.equal(d.hooks.useIsMobileQuestDockRenderedBase(creative), false, 'dock still reported as not rendered');
+    assert.ok(!PATCHES.some(p => p.key === 'useMobileQuestDock'), 'values passed on to other Discord code are never altered');
+    assert.throws(() => d.hooks.useIsMobileQuestDockRenderedBase(null), /type/, 'the fixture really reproduces the unguarded read');
     hider.dispose();
 });

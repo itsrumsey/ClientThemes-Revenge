@@ -1,5 +1,19 @@
 # Project status
 
+## Current status (2026-10-17)
+
+| Item | Automated | Device (Discord 349.9) |
+| --- | --- | --- |
+| ClientThemes Revived: packaging fix, plugin loads | Pass | Confirmed |
+| Gradient unlock | Pass | Confirmed |
+| Cold-start restoration | Pass | Confirmed once, with no Revenge color theme active; repeated cold starts pending |
+| Revenge color-theme conflict warning | Pass | Cause confirmed (`bn-theme-3`); warning display pending |
+| Base theme with gradients (Onyx etc.) | Pass | Confirmed (cold open and mid-use) |
+| Settings pages gradient-themed | n/a | Not done by Discord for real Nitro either (user-checked); not implemented |
+| Hide Quests | Pass | First preview crashed; fixed, retest pending |
+
+Install URLs: ClientThemes Revived `https://itsrumsey.github.io/ClientThemes-Revenge/`, Hide Quests `https://itsrumsey.github.io/ClientThemes-Revenge/HideQuests/`. PR #1 is a draft and unmerged; no release has been published.
+
 ## Provenance and baseline
 
 Imported only ClientThemes from aeongdesu/vdplugins commit `4d1ed7f7d6c9fca5b7ca417bc4b744fecf44de22`. The complete upstream implementation was `plugins/ClientThemes/src/index.ts` plus `manifest.json`, with no local shared runtime dependencies. Retained its Rollup/SWC/esbuild pipeline, helper dependency and legacy typings. Removed unrelated plugins, unused ApplicationCommandTypes.ts, workspace-only configuration, Pages deployment and ADB actions.
@@ -94,6 +108,6 @@ Unit tests cover compatibility, descriptor rewriting through the real hook, the 
 
 ## Hide Quests (second plugin)
 
-New independent plugin `plugins/HideQuests`, published at `https://itsrumsey.github.io/ClientThemes-Revenge/HideQuests/` (ClientThemes Revived stays at the site root with its storage and byte-identical bundle). It patches four Discord functions with spitroast `instead` hooks that always call the original first (hook order unchanged): `getIsEligibleForQuests` → false (Discord's Meta Quest quests-off gate that stops `Guilds.tsx` mounting the Quest Dock), `useMobileQuestDock` → null, `useIsMobileQuestDockRenderedBase` / `useIsMobileQuestDockRendered` → false (You bar layout). Missing modules retry on a bounded backoff (7 attempts) and are reported per function; unload restores all originals and clears timers. Display only, no automation or network changes.
+New independent plugin `plugins/HideQuests`, published at `https://itsrumsey.github.io/ClientThemes-Revenge/HideQuests/` (ClientThemes Revived stays at the site root with its storage and byte-identical bundle). It patches three Discord functions with spitroast `instead` hooks that always call the original first (hook order unchanged): `getIsEligibleForQuests` → false (Discord's Meta Quest quests-off gate that stops `Guilds.tsx` mounting the Quest Dock) and `useIsMobileQuestDockRenderedBase` / `useIsMobileQuestDockRendered` → false (You bar layout). The first preview also returned `null` from `useMobileQuestDock`; Discord feeds that value to `getQuestDockQuest`, which reads `.type` unguarded, and the You bar crashed on the device. That patch was removed and a regression test with Discord-faithful mocks was added. Missing modules retry on a bounded backoff (7 attempts) and are reported per function; unload restores all originals and clears timers. Display only, no automation or network changes.
 
-Build attribution is now per plugin (ClientThemes notice unchanged). The Pages artifact contains both plugins; the deploy job verifies each URL's manifest and exact hash. Unit tests and a compiled-bundle check through Revenge's evaluation wrapper cover patches, partial/missing modules, retry, cleanup and repeat-build determinism. **Device results pending.** Note: AGENTS.md says to maintain only ClientThemes; this second plugin was added at the user's explicit request.
+Build attribution is now per plugin (ClientThemes notice unchanged). The Pages artifact contains both plugins; the deploy job verifies each URL's manifest and exact hash. Unit tests and a compiled-bundle check through Revenge's evaluation wrapper cover patches, partial/missing modules, retry, cleanup and repeat-build determinism. **Device results pending.** AGENTS.md was updated at the user's request to cover both plugins.

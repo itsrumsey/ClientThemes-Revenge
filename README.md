@@ -2,7 +2,9 @@
 
 **ClientThemes Revived** is a standalone reliability fork of sapphire / aeongdesu's **ClientThemes**, extracted from [aeongdesu/vdplugins](https://github.com/aeongdesu/vdplugins). Preserves the original m4fn3/FreeNitroTheme attribution and GPL-3.0 license. Original authors remain in the manifest; see [LICENSE](LICENSE).
 
-This is a **review build**, not a released or device-certified plugin. It retains the Vendetta-compatible API verified in Revenge `1b1d297-main` (1.11.6); it does not target Revenge Next.
+This repository also publishes a second, independent plugin, **Hide Quests** (see [Hide Quests](#hide-quests-second-plugin)).
+
+This is a **preview build**, not a release. It retains the Vendetta-compatible API verified in Revenge `1b1d297-main` (1.11.6); it does not target Revenge Next. Confirmed on the target device so far: gradient unlock, cold-start restoration (with no Revenge color theme active) and the base theme option. See [DEVICE_TESTS.md](docs/DEVICE_TESTS.md) for what is still pending.
 
 ## Compatibility target
 
@@ -14,7 +16,7 @@ This is a **review build**, not a released or device-certified plugin. It retain
 | RevengeXposed | 1.6.3 |
 | Android | 16 / SDK 36 |
 
-The Revenge loader/API was audited at its exact commit. Discord-private contracts are guarded and corroborated by adjacent public 349.5 source evidence; **349.9 and physical-device compatibility remain unverified**. See [audit and failure analysis](docs/AUDIT.md) and [device acceptance checklist](docs/DEVICE_TESTS.md).
+The Revenge loader/API was audited at its exact commit. Discord-private contracts are guarded and corroborated by adjacent public 349.5 and 351.4 source evidence. Device results on 349.9 are recorded separately from automated results. See [audit and failure analysis](docs/AUDIT.md) and [device acceptance checklist](docs/DEVICE_TESTS.md).
 
 ## Build and download
 
@@ -27,7 +29,7 @@ npm run build
 npm run check:bundle
 ```
 
-Outputs: `dist/ClientThemes/index.js` and `dist/ClientThemes/manifest.json`, including the bundle's SHA-256. `check:bundle` evaluates the compiled plugin with mocked host APIs, exercises restoration/recovery/cleanup, validates the manifest and checks a second build is byte-identical. It does not run Discord or Android.
+Outputs: `dist/ClientThemes/` and `dist/HideQuests/` (`index.js` and `manifest.json` each, with the bundle's SHA-256). `check:bundle` evaluates both compiled plugins through Revenge's exact `vendetta=>{return <bundle>}` wrapper with mocked host APIs, exercises restoration/recovery/cleanup and the settings screens, validates the manifests and checks a second build is byte-identical. It does not run Discord or Android.
 
 [GitHub Actions](https://github.com/itsrumsey/ClientThemes-Revenge/actions) runs these checks and uploads a downloadable `ClientThemes-review-<commit>` artifact with plugin files, license and documentation. Sign in to GitHub to download Actions artifacts. The build workflow uploads review artifacts; the separate modernization-only Pages workflow publishes a validated experimental preview without creating a release.
 
@@ -104,4 +106,4 @@ This repository also publishes **Hide Quests**, a separate plugin with its own i
 
 Install it the same way (Revenge plugins → +), including the final slash. ClientThemes Revived keeps its own URL (`https://itsrumsey.github.io/ClientThemes-Revenge/`) and storage; the two plugins are independent.
 
-Hide Quests hides the Quest Dock, the quest banner above the You bar. It uses Discord's own quests-off gate (`getIsEligibleForQuests`, which Discord uses on Meta Quest headsets) and tells the You bar no dock is present (`useMobileQuestDock`, `useIsMobileQuestDockRenderedBase`, `useIsMobileQuestDockRendered`). Every patch calls Discord's original first, so it is safe to enable or disable while Discord is open; a banner already on screen disappears on the next redraw or after a restart. It is display only: quests are not completed, claimed or blocked from loading, and nothing is sent to Discord. The settings page shows which Discord functions were found and patched.
+Hide Quests hides the Quest Dock, the quest banner above the You bar. It uses Discord's own quests-off gate (`getIsEligibleForQuests`, which Discord uses on Meta Quest headsets) and reports the dock as not rendered (`useIsMobileQuestDockRenderedBase`, `useIsMobileQuestDockRendered`) so the You bar is laid out without it. The first preview also replaced `useMobileQuestDock` with `null`, which crashed Discord 349.9 when returning to the conversation list ("Cannot read property 'type' of null" in `getQuestDockQuest`); that patch was removed, and a regression test reproduces Discord's unguarded read. Every patch calls Discord's original first, so it is safe to enable or disable while Discord is open; a banner already on screen disappears on the next redraw or after a restart. It is display only: quests are not completed, claimed or blocked from loading, and nothing is sent to Discord. The settings page shows which Discord functions were found and patched.

@@ -6,17 +6,21 @@
 //   QuestsEligibility.getIsEligibleForQuests() is true. That function is `!isMetaQuest()`: the gate
 //   Discord itself uses to turn quests off on Meta Quest headsets.
 // - main_tabs_v2/native/you_bar/YouBar.tsx shapes the You bar around the dock using
-//   useMobileQuestDock() and useIsMobileQuestDockRenderedBase(); quest code also reads
-//   useIsMobileQuestDockRendered(). All three live in quests/native/QuestHooks.native.tsx.
+//   useIsMobileQuestDockRenderedBase(useMobileQuestDock()); quest code also reads
+//   useIsMobileQuestDockRendered(). These hooks live in quests/native/QuestHooks.native.tsx.
 //
 // Every patch calls Discord's original first and only changes the returned value, so React hook order
 // is identical whether the plugin is enabled or not (safe to enable or disable mid-session).
+//
+// Never change a value that Discord passes on to other code. useMobileQuestDock() is deliberately NOT
+// patched: its result is fed to useIsMobileQuestDockRenderedBase(creative) -> getQuestDockQuest(creative),
+// which reads `creative.type` unguarded (ads/utils/AdCreativeUtils.tsx). Returning null from it crashed
+// the You bar on Discord 349.9 ("Cannot read property 'type' of null" in getQuestDockQuest). Only the
+// boolean results that end the chain are changed.
 
 export const PATCHES = [
     { name: "eligibility", key: "getIsEligibleForQuests", value: false,
         purpose: "Discord's own quests-off gate; stops the Quest Dock from mounting" },
-    { name: "dockCreative", key: "useMobileQuestDock", value: null,
-        purpose: "No quest creative for the You bar layout" },
     { name: "dockRenderedBase", key: "useIsMobileQuestDockRenderedBase", value: false,
         purpose: "You bar is shaped as if no dock is present" },
     { name: "dockRendered", key: "useIsMobileQuestDockRendered", value: false,
