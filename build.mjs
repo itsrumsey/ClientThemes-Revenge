@@ -7,7 +7,7 @@ import commonjs from "@rollup/plugin-commonjs"
 import nodeResolve from "@rollup/plugin-node-resolve"
 import swc from "@swc/core"
 
-import { withAttribution } from "./scripts/attribution.mjs"
+import { noticeFor, withAttribution } from "./scripts/attribution.mjs"
 
 /** @type import("rollup").InputPluginOption */
 const plugins = [
@@ -72,7 +72,7 @@ for (let plug of await readdir("./plugins")) {
 
         // Add attribution after minification so the generated artifact retains it. It must stay on one
         // line with no trailing newline: Revenge evaluates `return ${js}` (see scripts/attribution.mjs).
-        await writeFile(outPath, withAttribution(await readFile(outPath, "utf8")))
+        await writeFile(outPath, withAttribution(await readFile(outPath, "utf8"), noticeFor(plug)))
         const toHash = await readFile(outPath)
         manifest.hash = createHash("sha256").update(toHash).digest("hex")
         manifest.main = "index.js"

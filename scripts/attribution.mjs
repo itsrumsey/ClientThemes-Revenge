@@ -8,12 +8,24 @@
 // body unreachable. Keep the header on a single line and end it with a space, never a newline.
 export const ATTRIBUTION_NOTICE = "/* ClientThemes by sapphire/aeongdesu; credits m4fn3/FreeNitroTheme. GPL-3.0; see LICENSE. */ ";
 
+// Per-plugin notices (same single-line rule). ClientThemes keeps its original notice unchanged.
+export const PLUGIN_NOTICES = {
+    ClientThemes: ATTRIBUTION_NOTICE,
+    HideQuests: "/* Hide Quests for Revenge by itsrumsey (ClientThemes-Revenge repository). GPL-3.0; see LICENSE. */ "
+};
+
 const LINE_TERMINATOR = /[\n\r\u2028\u2029]/;
 
-export function withAttribution(code) {
-    if (LINE_TERMINATOR.test(ATTRIBUTION_NOTICE)) {
-        throw new Error("Attribution notice must not contain a line terminator (breaks Revenge's `return` wrapper)");
+export function noticeFor(plugin) {
+    const notice = PLUGIN_NOTICES[plugin];
+    if (!notice) throw new Error(`No attribution notice defined for plugin ${plugin}`);
+    return notice;
+}
+
+export function withAttribution(code, notice = ATTRIBUTION_NOTICE) {
+    if (LINE_TERMINATOR.test(notice) || !notice.endsWith(" ")) {
+        throw new Error("Attribution notice must be one line ending in a space (a line terminator breaks Revenge's `return` wrapper)");
     }
     // Also drop any leading whitespace/newline in the generated code so nothing separates header and expression.
-    return ATTRIBUTION_NOTICE + code.trimStart();
+    return notice + code.trimStart();
 }

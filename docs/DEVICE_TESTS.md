@@ -71,3 +71,13 @@ Implemented, device testing pending. Discord's native picker saves a gradient wi
 5. Discord default: returns to the preset's own base theme.
 6. With a Revenge color theme active, choices are not applied (message shown).
 7. If Theme Sources shows sync on, choices must not apply.
+
+## Hide Quests (pending)
+
+Install `https://itsrumsey.github.io/ClientThemes-Revenge/HideQuests/` as a separate plugin.
+
+1. Settings page: "Active: the Quest Dock is hidden." and all four functions patched. Record any "not patched" entries.
+2. With a quest banner on screen, restart Discord: the banner should be gone and the You bar should look normal (no gap or flat top edge where the dock was).
+3. Navigate tabs, open DMs and servers: no crash, no empty space.
+4. Disable the plugin, restart: the banner returns. Re-enable: it disappears again.
+5. Confirm ClientThemes Revived (gradient, base theme, cold start) is unaffected with both plugins enabled.

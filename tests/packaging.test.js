@@ -74,3 +74,20 @@ test('build.mjs uses the single-line attribution helper rather than an inline ne
     assert.match(build, /withAttribution\(/);
     assert.doesNotMatch(build, /\*\/\\n/, 'no inline header ending in an escaped newline');
 });
+
+test('every plugin has a single-line notice; Hide Quests is attributed separately from ClientThemes', async () => {
+    const { PLUGIN_NOTICES, noticeFor } = await import('../scripts/attribution.mjs');
+    const { readdir } = await import('node:fs/promises');
+    for (const plugin of await readdir(new URL('../plugins/', import.meta.url))) {
+        const notice = noticeFor(plugin);
+        assert.match(notice, /^\/\*.*\*\/ $/, plugin);
+        assert.doesNotMatch(notice, /[\n\r\u2028\u2029]/, plugin);
+        assert.match(notice, /GPL-3\.0/, plugin);
+        const { bodyRan } = evaluate(withAttribution(BUNDLE, notice));
+        assert.equal(bodyRan, 1, `${plugin} header keeps the Revenge wrapper working`);
+    }
+    assert.equal(PLUGIN_NOTICES.ClientThemes, ATTRIBUTION_NOTICE, 'ClientThemes notice unchanged');
+    assert.doesNotMatch(PLUGIN_NOTICES.HideQuests, /sapphire|aeongdesu/);
+    assert.throws(() => noticeFor('Unknown'), /No attribution notice/);
+    assert.throws(() => withAttribution(BUNDLE, '/* bad */\n'), /one line/);
+});

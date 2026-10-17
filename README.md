@@ -95,3 +95,13 @@ Choose either a Revenge color theme or a ClientThemes gradient. The plugin setti
 Discord saves every gradient preset with a fixed base theme (Dark for dark gradients, Light for light ones), and settings and other non-gradient screens use that base theme. This is the same for real Nitro: Discord does not gradient-theme its settings pages. In plugin settings, **Base theme with gradients** lets you choose Light, Ash, Dark or Onyx instead, or keep **Discord default**.
 
 Only base themes of the same lightness as the gradient are offered (Ash, Dark or Onyx for dark gradients; Light for light gradients), because gradient surfaces keep their own light/dark colors and mixing them would make text hard to read. Your choice is applied when you pick a gradient in Discord's own picker, and immediately to the gradient shown when you change it in plugin settings. Discord stores the result in its local appearance settings, so it survives restarts. The plugin only writes it while appearance sync is confirmed off (nothing is sent to Discord's servers) and does nothing while a Revenge color theme is active.
+
+## Hide Quests (second plugin)
+
+This repository also publishes **Hide Quests**, a separate plugin with its own install URL:
+
+`https://itsrumsey.github.io/ClientThemes-Revenge/HideQuests/`
+
+Install it the same way (Revenge plugins → +), including the final slash. ClientThemes Revived keeps its own URL (`https://itsrumsey.github.io/ClientThemes-Revenge/`) and storage; the two plugins are independent.
+
+Hide Quests hides the Quest Dock, the quest banner above the You bar. It uses Discord's own quests-off gate (`getIsEligibleForQuests`, which Discord uses on Meta Quest headsets) and tells the You bar no dock is present (`useMobileQuestDock`, `useIsMobileQuestDockRenderedBase`, `useIsMobileQuestDockRendered`). Every patch calls Discord's original first, so it is safe to enable or disable while Discord is open; a banner already on screen disappears on the next redraw or after a restart. It is display only: quests are not completed, claimed or blocked from loading, and nothing is sent to Discord. The settings page shows which Discord functions were found and patched.

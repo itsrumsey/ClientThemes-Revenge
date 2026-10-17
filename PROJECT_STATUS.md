@@ -91,3 +91,9 @@ A real Nitro account confirmed that Discord does not gradient-theme its settings
 - Restoration controller, startup, entitlement patches and packaging are unchanged. Default (no choice) is identical to before.
 
 Unit tests cover compatibility, descriptor rewriting through the real hook, the sync/conflict guards and failure reporting; the compiled-bundle check renders the new section. **Device results pending** (docs/DEVICE_TESTS.md).
+
+## Hide Quests (second plugin)
+
+New independent plugin `plugins/HideQuests`, published at `https://itsrumsey.github.io/ClientThemes-Revenge/HideQuests/` (ClientThemes Revived stays at the site root with its storage and byte-identical bundle). It patches four Discord functions with spitroast `instead` hooks that always call the original first (hook order unchanged): `getIsEligibleForQuests` → false (Discord's Meta Quest quests-off gate that stops `Guilds.tsx` mounting the Quest Dock), `useMobileQuestDock` → null, `useIsMobileQuestDockRenderedBase` / `useIsMobileQuestDockRendered` → false (You bar layout). Missing modules retry on a bounded backoff (7 attempts) and are reported per function; unload restores all originals and clears timers. Display only, no automation or network changes.
+
+Build attribution is now per plugin (ClientThemes notice unchanged). The Pages artifact contains both plugins; the deploy job verifies each URL's manifest and exact hash. Unit tests and a compiled-bundle check through Revenge's evaluation wrapper cover patches, partial/missing modules, retry, cleanup and repeat-build determinism. **Device results pending.** Note: AGENTS.md says to maintain only ClientThemes; this second plugin was added at the user's explicit request.

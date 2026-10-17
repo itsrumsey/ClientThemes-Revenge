@@ -2,7 +2,18 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 
-const [base, expectedHash] = process.argv.slice(2);
+const [base, expectedHash, profileName = 'clientthemes'] = process.argv.slice(2);
+// Expected public metadata per plugin; each plugin has its own legacy install URL.
+const PROFILES = {
+    clientthemes: { name: 'ClientThemes Revived',
+        description: 'Modernized ClientThemes for Revenge. Persistent theme selection, automatic startup restoration, and self-healing theme recovery.',
+        author: a => a.name === 'sapphire' && a.id === '757982547861962752' },
+    hidequests: { name: 'Hide Quests',
+        description: "Hides Discord's Quest Dock (the quest banner above the You bar) using Discord's own quests-off gate. Display only: no quest automation, no network changes.",
+        author: a => a.name === 'itsrumsey' }
+};
+const profile = PROFILES[profileName];
+assert.ok(profile, `Unknown verification profile ${profileName}`);
 const url = new URL(base);
 assert.equal(url.protocol, 'https:');
 assert.ok(url.pathname.endsWith('/'), 'Legacy install URL must end with /');
@@ -22,9 +33,9 @@ for (let attempt = 0; attempt < 12; attempt++) {
         const bytes = Buffer.from(await bundleResponse.arrayBuffer());
         const hash = createHash('sha256').update(bytes).digest('hex');
         assert.equal(manifest.main, 'index.js');
-        assert.equal(manifest.name, 'ClientThemes Revived');
-        assert.equal(manifest.description, 'Modernized ClientThemes for Revenge. Persistent theme selection, automatic startup restoration, and self-healing theme recovery.');
-        assert.ok(manifest.authors.some(a => a.name === 'sapphire' && a.id === '757982547861962752'));
+        assert.equal(manifest.name, profile.name);
+        assert.equal(manifest.description, profile.description);
+        assert.ok(manifest.authors.some(profile.author));
         assert.ok(manifest.vendetta, 'Legacy polymanifest metadata');
         assert.equal(manifest.hash, hash, 'Deployed bundle must match public manifest');
         assert.equal(hash, expectedHash, 'CDN must serve this run, not an older deployment');

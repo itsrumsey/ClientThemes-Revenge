@@ -18,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       bundle_hash: ${{ steps.integrity.outputs.hash }}
+      hidequests_hash: ${{ steps.integrity.outputs.hidequests_hash }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,8 +37,11 @@ jobs:
         id: integrity
         run: |
           cp LICENSE dist/ClientThemes/LICENSE
-          node --input-type=module -e "import fs from 'node:fs'; const m = JSON.parse(fs.readFileSync('dist/ClientThemes/manifest.json')); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'hash=' + m.hash + '\n');"
-          test "$(find dist/ClientThemes -type f | wc -l)" -eq 3
+          # ClientThemes Revived stays at the site root (its install URL and storage); Hide Quests gets /HideQuests/.
+          mkdir -p dist/ClientThemes/HideQuests
+          cp dist/HideQuests/index.js dist/HideQuests/manifest.json LICENSE dist/ClientThemes/HideQuests/
+          node --input-type=module -e "import fs from 'node:fs'; const m = JSON.parse(fs.readFileSync('dist/ClientThemes/manifest.json')); const h = JSON.parse(fs.readFileSync('dist/ClientThemes/HideQuests/manifest.json')); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'hash=' + m.hash + '\nhidequests_hash=' + h.hash + '\n');"
+          test "$(find dist/ClientThemes -type f | wc -l)" -eq 6
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist/ClientThemes/
@@ -69,3 +73,8 @@ jobs:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
           EXPECTED_HASH: ${{ needs.validate.outputs.bundle_hash }}
         run: node scripts/verify-deployment.mjs "$PAGE_URL" "$EXPECTED_HASH"
+      - name: Verify Hide Quests install endpoint and exact bundle hash
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          EXPECTED_HASH: ${{ needs.validate.outputs.hidequests_hash }}
+        run: node scripts/verify-deployment.mjs "${PAGE_URL}HideQuests/" "$EXPECTED_HASH" hidequests

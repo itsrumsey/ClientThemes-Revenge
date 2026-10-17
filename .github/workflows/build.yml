@@ -19,8 +19,11 @@ jobs:
         run: |
           cp LICENSE README.md dist/ClientThemes/
           cp PROJECT_STATUS.md dist/ClientThemes/
+          cp LICENSE dist/HideQuests/
       - uses: actions/upload-artifact@v4
         with:
           name: ClientThemes-review-${{ github.sha }}
           if-no-files-found: error
-          path: dist/ClientThemes/
+          path: |
+            dist/ClientThemes/
+            dist/HideQuests/
