@@ -1,0 +1,13 @@
+{
+    "name": "Hide Quests",
+    "description": "Hides Discord's Quest Dock (the quest banner above the You bar) using Discord's own quests-off gate. Display only: no quest automation, no network changes.",
+    "authors": [
+        {
+            "name": "itsrumsey"
+        }
+    ],
+    "main": "src/index.ts",
+    "vendetta": {
+        "icon": "EyeSlashIcon"
+    }
+}
