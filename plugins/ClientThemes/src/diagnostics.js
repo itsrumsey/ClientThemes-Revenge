@@ -76,12 +76,17 @@ export function createThemeSources({ metro, storage, revengeThemes, now = () => 
             add('Gradient store', 'getLinearGradient()', () => call(background, 'getLinearGradient', 'ClientThemesBackgroundStore'));
 
             const constants = find('props', 'BACKGROUND_GRADIENT_PRESETS_MAP');
-            add('Selected preset definition', 'expected base theme', () => {
+            add('Selected preset definition', 'preset default base theme', () => {
                 if (selection == null || !Number.isSafeInteger(selection.presetId)) return unknown('no saved preset ID');
                 const map = prop(constants, 'BACKGROUND_GRADIENT_PRESETS_MAP', 'Gradient constants');
                 if (map instanceof Unknown) return map;
                 const definition = map?.[selection.presetId];
                 return definition == null ? unknown(`preset ${selection.presetId} not in catalog`) : definition.theme;
+            });
+            // Optional base theme chosen in this plugin; null means Discord's default for the preset.
+            add('Selected preset definition', 'chosen base theme (ClientThemes Revived)', () => {
+                const value = (() => { try { return storage?.baseTheme; } catch { return undefined; } })();
+                return value ?? null;
             });
 
             const theme = find('store', 'ThemeStore');

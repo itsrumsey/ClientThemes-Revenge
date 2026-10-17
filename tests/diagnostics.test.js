@@ -51,7 +51,7 @@ test('captures each theme source explicitly from fully available modules', () =>
     const expected = {
         'saved selection.presetId': 11, 'saved selection.enabled': true,
         'gradientPreset.id': 11, 'gradientPreset.theme (preset base theme)': 'dark', isPreview: false,
-        'getLinearGradient()': 'linear-gradient(#000)', 'expected base theme': 'dark',
+        'getLinearGradient()': 'linear-gradient(#000)', 'preset default base theme': 'dark',
         theme: 'midnight', systemTheme: 'dark', 'isSameAsDeviceThemeEnabled()': false,
         'synced client theme for systemTheme': undefined, 'shouldSync("appearance")': false,
         'settings present': true, 'clientThemeSettings.backgroundGradientPresetId': undefined,
@@ -89,8 +89,8 @@ test('missing Discord modules yield unknown rows, never defaults, and never thro
         'UnsyncedUserSettingsStore', 'CustomThemeMobileStore', 'BACKGROUND_GRADIENT_PRESETS_MAP'] });
     const capture = createThemeSources({ metro: d.metro, storage: { selection: { version: 1, enabled: true, presetId: 11 } } }).capture();
     const unknownRows = capture.rows.filter(r => !r.known).map(r => r.label);
-    assert.deepEqual(capture.rows.filter(r => r.known).map(r => r.label), ['saved selection.presetId', 'saved selection.enabled']);
-    assert.ok(unknownRows.includes('theme') && unknownRows.includes('useSystemTheme') && unknownRows.includes('expected base theme'));
+    assert.deepEqual(capture.rows.filter(r => r.known).map(r => r.label), ['saved selection.presetId', 'saved selection.enabled', 'chosen base theme (ClientThemes Revived)']);
+    assert.ok(unknownRows.includes('theme') && unknownRows.includes('useSystemTheme') && unknownRows.includes('preset default base theme'));
     for (const entry of capture.rows.filter(r => !r.known)) {
         assert.match(formatValue(entry), /^unknown \(.+\)$/, entry.label);
         assert.equal('value' in entry, false, `${entry.label} must not carry a default value`);
@@ -116,7 +116,7 @@ test('partially available modules: missing methods, throwing getters and failing
     const localTheme = capture.rows.find(r => r.group === 'Local appearance settings' && r.label === 'theme');
     assert.match(formatValue(localTheme), /local appearance settings is undefined/);
     assert.match(formatValue(valueOf(capture, 'hasCustomTheme()')), /CustomThemeMobileStore lookup failed: Error: boom/);
-    assert.match(formatValue(valueOf(capture, 'expected base theme')), /no saved preset ID/);
+    assert.match(formatValue(valueOf(capture, 'preset default base theme')), /no saved preset ID/);
     assert.deepEqual(d.writes, []); assert.deepEqual(d.dispatches, []);
 });
 

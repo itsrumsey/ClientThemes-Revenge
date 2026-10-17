@@ -80,3 +80,14 @@ Follow-up changes (no restoration, startup, entitlement or picker behavior chang
 - Controller status `healthy` is renamed `gradient-restored`, displayed as "Gradient restored (gradient store only; rendered colors not verified)". Earlier sections of this file that say "healthy" refer to this status.
 - Theme Sources diagnostics are kept behind a collapsed-by-default **Show diagnostics** section with manual recapture.
 - README documents that Revenge color themes and ClientThemes Revived should not be used together.
+
+## Base theme with gradients
+
+A real Nitro account confirmed that Discord does not gradient-theme its settings pages; they follow the base theme saved with the gradient preset (Dark for dark presets). New optional setting **Base theme with gradients** (Discord default / Light / Ash / Dark / Onyx, same-lightness only):
+
+- Discord's native save handler receives the chosen base through the existing `handleSaveTheme` hook, so Discord saves it with the gradient itself.
+- Changing the choice in plugin settings calls Discord's `saveClientTheme` once for the gradient shown, only while appearance sync is confirmed off and no Revenge color theme is active.
+- Gradient-aware colors use the preset's light/dark flags, not the base theme, so gradient surfaces are unchanged.
+- Restoration controller, startup, entitlement patches and packaging are unchanged. Default (no choice) is identical to before.
+
+Unit tests cover compatibility, descriptor rewriting through the real hook, the sync/conflict guards and failure reporting; the compiled-bundle check renders the new section. **Device results pending** (docs/DEVICE_TESTS.md).

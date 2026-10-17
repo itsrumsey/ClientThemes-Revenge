@@ -75,6 +75,17 @@ button(screen, 'Hide diagnostics').props.onPress();
 assert.ok(!texts(render(plugin.settings)).includes('Theme Sources'), 'Hide diagnostics collapses the section');
 assert.equal(JSON.stringify(storage), storageBefore, 'Diagnostics must not write plugin storage');
 assert.equal(f.store.gradientPreset, presetBefore, 'Diagnostics must not change the gradient');
+// Base theme with gradients: the compiled screen offers the choices and, without confirmed sync-off, never writes to Discord.
+let baseScreen = render(plugin.settings);
+assert.ok(texts(baseScreen).includes('Base theme with gradients'), 'Base theme section must render');
+button(baseScreen, 'Onyx').props.onPress();
+assert.equal(storage.baseTheme, 'midnight', 'Choice is saved in plugin storage');
+baseScreen = render(plugin.settings);
+assert.ok(texts(baseScreen).some(l => /not recognised|not confirmed off/.test(l)), 'Without a recognised preset and confirmed sync-off, the Discord write is refused');
+assert.ok(button(baseScreen, 'Onyx (selected)'), 'Selected base is marked');
+button(baseScreen, 'Discord default').props.onPress();
+assert.equal('baseTheme' in storage, false, 'Discord default clears the choice');
+assert.equal(f.store.gradientPreset, presetBefore, 'Base theme choice never changes the gradient');
 f.modules[0].resetBackgroundGradientPreset();
 life.change('background'); await clock.advance(60000);
 assert.equal(f.store.gradientPreset, null);

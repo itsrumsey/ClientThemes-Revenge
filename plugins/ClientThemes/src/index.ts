@@ -10,6 +10,7 @@ import { createController } from "./controller.js";
 import { createResolver } from "./adapter.js";
 import { createFeatures } from "./features.js";
 import { createThemeSources, formatValue } from "./diagnostics.js";
+import { BASE_THEMES, applyBaseTheme, isCompatible, label, savedBaseTheme } from "./base-theme.js";
 
 // The status reflects the gradient store only; rendered surface colors are not verified.
 const STATUS_LABELS = { "gradient-restored": "Gradient restored (gradient store only; rendered colors not verified)" };
@@ -71,6 +72,16 @@ export function settings() {
     const capture = () => createThemeSources({ metro, storage, revengeThemes }).capture();
     const [sources, setSources] = React.useState(capture);
     const [showDiagnostics, setShowDiagnostics] = React.useState(false);
+    const [baseMessage, setBaseMessage] = React.useState("");
+    const chosenBase = savedBaseTheme(storage);
+    // Read-only: the base theme of the gradient currently shown decides which choices are compatible.
+    let presetBase = null;
+    try { presetBase = metro.findByStoreName("ClientThemesBackgroundStore")?.gradientPreset?.theme ?? null; } catch {}
+    const chooseBase = value => {
+        if (value == null) delete storage.baseTheme; else storage.baseTheme = value;
+        setBaseMessage(applyBaseTheme({ storage, metro }).reason);
+        recapture(); refresh();
+    };
     const recapture = () => setSources(capture());
     let group;
     const sourceRows = sources.rows.flatMap((entry, i) => {
@@ -96,6 +107,17 @@ export function settings() {
             React.createElement(Text, { key: "waiting", style: { color } },
                 "Waiting for supported theme modules. If suspended, reenable after reviewing ClientThemes logs.")
         ]),
+        React.createElement(Text, { style: { color, fontSize: 18, marginTop: 12 } }, "Base theme with gradients"),
+        React.createElement(Text, { style: { color } },
+            `Settings and other non-gradient screens use this base theme. Current choice: ${chosenBase ? label(chosenBase) : "Discord default"}. `
+            + (presetBase ? `The gradient shown is ${presetBase === "light" ? "light, so only Light fits" : "dark, so Ash, Dark or Onyx fit"}.` : "No gradient is shown right now.")
+            + " Discord's own picker applies your choice when you pick a gradient."),
+        React.createElement(Button, { title: "Discord default", onPress: () => chooseBase(null) }),
+        ...BASE_THEMES.map(t => React.createElement(Button, { key: `base-${t.value}`,
+            title: chosenBase === t.value ? `${t.label} (selected)` : t.label,
+            disabled: presetBase != null && !isCompatible(t.value, presetBase),
+            onPress: () => chooseBase(t.value) })),
+        ...(baseMessage ? [React.createElement(Text, { key: "base-message", style: { color } }, baseMessage)] : []),
         React.createElement(Button, { title: showDiagnostics ? "Hide diagnostics" : "Show diagnostics",
             onPress: () => setShowDiagnostics(!showDiagnostics) }),
         ...(showDiagnostics ? [

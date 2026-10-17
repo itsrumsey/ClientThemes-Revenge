@@ -59,3 +59,15 @@ This is a single cold-start result. Long-term restoration reliability is **not y
 ### Conflict indicator
 
 The settings screen shows a warning when the base theme starts with `bn-theme-`. Revenge sets that key only while a selected Revenge color theme is applied in the running session, and its storage patch rewrites the key back to a Discord theme before saving, so the prefix is not left behind as stale saved state. Revenge's own selection (`vendetta.themes.themes[*].selected`) and the loader's startup theme (`getCurrentTheme()`) are shown as supporting rows; a selected theme that is not applied (for example in safe mode) gets a softer note. The plugin never selects, disables or edits Revenge themes. Status "healthy" was renamed **Gradient restored** because it verifies gradient-store state only.
+
+## Base theme with gradients (pending)
+
+Implemented, device testing pending. Discord's native picker saves a gradient with the preset's own base theme (`"darker"` for dark presets, `"light"` for light ones), which is what settings screens use. A real Nitro account was checked by the user: settings are not gradient-themed, matching Discord's source. The plugin can substitute a base theme of the same lightness (Ash `"dark"`, Dark `"darker"`, Onyx `"midnight"`, Light `"light"`).
+
+1. With a dark gradient (e.g. preset 22) shown, choose Onyx, then Ash, then Dark in plugin settings. Settings screens should change; the DM panel and other gradient surfaces should keep the gradient. Theme Sources: ThemeStore theme and local appearance theme equal the choice; "chosen base theme" shows it.
+2. Pick another gradient in Discord's native picker, then the original one. The chosen base should stay (not reset to Dark).
+3. Cold start and force-stop several times. The base theme and gradient should both be restored.
+4. Light gradient: only Light is selectable; dark choices are disabled.
+5. Discord default: returns to the preset's own base theme.
+6. With a Revenge color theme active, choices are not applied (message shown).
+7. If Theme Sources shows sync on, choices must not apply.

@@ -1,7 +1,7 @@
 import { createResolver } from '../plugins/ClientThemes/src/adapter.js';
 import { createFeatures } from '../plugins/ClientThemes/src/features.js';
 
-export function fixture() {
+export function fixture({ storage = {} } = {}) {
     const listeners = new Set(), methods = [];
     const presets = { 0: { id: 0, type: 2, colors: ['red'], getName: () => 'Mint' },
         4: { id: 4, type: 2, colors: ['blue'] } };
@@ -32,7 +32,7 @@ export function fixture() {
     }]));
     const selections = [], catalogs = [];
     const logs = [];
-    const features = createFeatures({ metro, patcher, storage: {}, selected: id => selections.push(id), log: (event, detail) => logs.push([event, detail]) });
+    const features = createFeatures({ metro, patcher, storage, selected: id => selections.push(id), log: (event, detail) => logs.push([event, detail]) });
     const resolve = createResolver({ metro, features, onCatalog: c => catalogs.push(c) });
     const open = () => resolve({ changed: () => methods.push('change'), selected: id => selections.push(id), enabled: () => true });
     return { store, modules, metro, patcher, features, experiments, logs, open, selections, catalogs, listeners,
