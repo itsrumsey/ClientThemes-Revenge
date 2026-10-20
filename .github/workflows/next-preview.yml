@@ -1,0 +1,99 @@
+name: Next ClientThemes review
+on:
+  push:
+    branches: [revenge-next-client-themes]
+    paths: ['next/**', '.github/workflows/next-preview.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: next
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.0'
+      - run: npm install --ignore-scripts --legacy-peer-deps
+      - run: npm test
+      - run: npm run build
+      - run: node scripts/check-bundle.mjs
+      - run: python3 -m unittest discover -s tests -p '*_test.py' -v
+      - run: python3 scripts/package.py
+      - uses: actions/upload-artifact@v4
+        id: install
+        with:
+          name: ClientThemes-Next-installable
+          path: next/build/install/
+          if-no-files-found: error
+      - name: Verify the actual downloaded Actions ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/actions/artifacts/${{ steps.install.outputs.artifact-id }}/zip > build/downloaded-artifact.zip
+          python3 -c "from scripts.package import validate_package; validate_package('build/downloaded-artifact.zip'); print('Downloaded ZIP has root manifest and script')"
+
+  publish-preview7:
+    if: github.event_name == 'push' && github.event.head_commit.message == 'Publish ClientThemes Next preview7 correcting selector removal'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ClientThemes-Next-installable
+          path: release/plugin
+      - name: Package and validate the public release asset
+        run: |
+          python3 - <<'PY'
+          import pathlib, sys, zipfile
+          sys.path.insert(0, 'next/scripts')
+          from package import validate_package
+          root = pathlib.Path('release/plugin')
+          target = pathlib.Path('release/ClientThemes-Next-0.1.0-preview7.zip')
+          with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED) as archive:
+              for path in sorted(root.rglob('*')):
+                  if path.is_file():
+                      archive.write(path, path.relative_to(root))
+          manifest = validate_package(target)
+          assert manifest['version'] == '0.1.0-preview7'
+          PY
+      - name: Publish the requested public preview release
+        env:
+          RELEASE_TARGET: ${{ github.sha }}
+        run: |
+          cat > release/notes.md <<'NOTES'
+          ClientThemes Next: choose named themes in Discord; select Light, Ash, Dark or Onyx menu colors in the plugin.
+          
+          Corrects the reversed selector removal in preview6. Restores the menu-color radio group (Discord default, Light, Ash, Dark, Onyx) and its persistence. Removes the long list of named themes such as Mint Apple and Citrus Sherbert; select those in Discord’s native appearance picker. Keeps the local-dispatch fallback, lazy-module subscriptions, native UI styling and restoration safeguards.
+          
+          Download ClientThemes-Next-0.1.0-preview7.zip below and import it directly into Revenge Next. Update the existing plugin to preserve its settings.
+          
+          This release is for Revenge Next. Revenge Classic plugin files and installation URLs are unchanged.
+          
+          Built using the pinned official Next CLI; automated tests, bundle registration, ZIP structure and downloadable artifact verification passed before publication. If preview6 cleared your menu preference, select it once again. The compiled UI check enforces exactly five menu options and no named-theme selector. Device confirmation remains needed.
+          
+          GPL-3.0. Credits: PalmDevs, sapphire / aeongdesu, and m4fn3 / FreeNitroTheme. Corresponding plugin source is included in the ZIP.
+          NOTES
+          if ! gh release view next-v0.1.0-preview7 >/dev/null 2>&1; then
+            gh release create next-v0.1.0-preview7 release/ClientThemes-Next-0.1.0-preview7.zip --draft --prerelease --target "$RELEASE_TARGET" --title "ClientThemes Next 0.1.0-preview7" --notes-file release/notes.md
+            gh release edit next-v0.1.0-preview7 --draft=false
+          fi
+      - name: Verify anonymous download and ZIP integrity
+        run: |
+          curl --fail --location --retry 5 --retry-all-errors --retry-delay 3 "https://github.com/${{ github.repository }}/releases/download/next-v0.1.0-preview7/ClientThemes-Next-0.1.0-preview7.zip" --output release/public-download.zip
+          cmp release/ClientThemes-Next-0.1.0-preview7.zip release/public-download.zip
+          python3 -c "import sys; sys.path.insert(0, 'next/scripts'); from package import validate_package; validate_package('release/public-download.zip')"

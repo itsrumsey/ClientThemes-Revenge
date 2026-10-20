@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "id": "itsrumsey.client-themes-next",
+  "name": "ClientThemes Next",
+  "description": "Persistent Discord themes with independent Light, Ash, Dark and Onyx menu colors.",
+  "author": "itsrumsey (https://github.com/itsrumsey \"GitHub\")",
+  "contributors": ["Palm (https://github.com/PalmDevs \"GitHub\")", "sapphire / aeongdesu (https://github.com/aeongdesu \"GitHub\")", "m4fn3 (https://github.com/m4fn3/FreeNitroTheme \"FreeNitroTheme\")"],
+  "icon": "PaintPaletteIcon",
+  "version": "0.1.0-preview7",
+  "dependencies": { "revenge.api": { "version": ">=1 <2" }, "discord": { "version": "*" } },
+  "dist": { "script": "index.js" }
+}
