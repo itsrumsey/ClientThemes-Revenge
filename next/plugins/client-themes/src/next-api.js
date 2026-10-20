@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0
 // Next finder tuples and hook signatures differ from the legacy Vendetta API.
 export function createMetro(finders) {
-    const { lookupModule, lookupModules, filters: { withProps } } = finders;
+    const { lookupModules, filters: { withProps } } = finders;
     return {
-        findByProps: (...props) => lookupModule(withProps(...props), { initialize: false })[0],
+        findByProps(...props) {
+            // A cached first match can be uninitialized while another match is
+            // already available. Inspect every initialized candidate.
+            for (const [value] of lookupModules(withProps(...props), { initialize: false })) {
+                if (value && props.every(key => key in Object(value))) return value;
+            }
+        },
         findByStoreName(name) {
             for (const [store] of lookupModules(withProps('getName'), { initialize: false })) {
                 try { if (store?.getName() === name) return store; } catch {}
@@ -50,4 +56,27 @@ export async function createStorage(jsonStorage, report = console.error) {
         });
     }
     return { storage, flush: async () => { await tail; if (failure) throw failure; } };
+}
+
+// Subscribe like Fake Nitro instead of assuming lazy picker modules exist at start.
+export function watchThemeModules(finders, ready, report = () => {}) {
+    if (typeof finders.getModules !== 'function') return () => {};
+    let stopped = false;
+    const off = [], seen = new WeakSet();
+    for (const property of ['canUserUse', 'setShouldSyncAppearanceSettings',
+        'handleSaveTheme', 'updateBackgroundGradientPreset', 'BACKGROUND_GRADIENT_PRESETS_MAP',
+        'getLinearGradientForBackgroundGradient']) {
+        try {
+            off.push(finders.getModules(finders.filters.withProps(property), value => {
+                if (stopped || !value || !['object', 'function'].includes(typeof value) || seen.has(value)) return;
+                seen.add(value);
+                try { ready(); } catch (error) { report(error); }
+            }, { initialize: false }));
+        } catch (error) { report(error); }
+    }
+    return () => {
+        if (stopped) return;
+        stopped = true;
+        for (const dispose of off.reverse()) { try { dispose(); } catch (error) { report(error); } }
+    };
 }

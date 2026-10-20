@@ -207,6 +207,15 @@ export function createController({ storage, resolve, lifecycle, log = () => {},
         },
         choose,
         recheck: () => enqueue(),
+        modulesReady() {
+            if (!running) return;
+            // A newly initialized module can repair readiness, not a write loop.
+            if (circuit && /Missing|not ready|Unlock functionality/.test(detail.reason ?? '')) {
+                failures = 0; notBefore = 0; circuit = false;
+                report('waiting-for-modules');
+            }
+            enqueue();
+        },
         inspect: () => ({ status, detail, selection, failures, circuit, active, running })
     };
 }

@@ -220,3 +220,18 @@ test('suspended status exposes its cause to the configurator', async () => {
     assert.match(f.control.inspect().detail.reason, /Missing test theme contract/);
     f.control.stop();
 });
+
+test('a newly loaded module retries readiness suspension without changing saved intent', async () => {
+    let available = false;
+    const f = fixture({ resolve(session) {
+        if (!available) throw Error('Missing Discord theme contracts: action');
+        return session;
+    } });
+    f.control.start(); await f.clock.advance(120000);
+    assert.equal(f.control.inspect().circuit, true);
+    const saved = JSON.stringify(f.storage);
+    available = true; f.control.modulesReady(); await f.clock.advance(1000);
+    assert.equal(f.control.inspect().status, 'gradient-restored');
+    assert.equal(JSON.stringify(f.storage), saved);
+    f.control.stop();
+});

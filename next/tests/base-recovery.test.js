@@ -2,68 +2,52 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createResolver } from '../plugins/client-themes/src/adapter.js';
 
-function setup() {
-    const storage = { baseTheme: 'midnight' }, listeners = new Set();
-    const preset = { id: 0, colors: ['red'], theme: 'darker' };
-    const theme = { theme: 'darker' }, sync = { shouldSync: () => false };
+function setup({ action = true } = {}) {
+    const listeners = new Set(), preset = { id: 0, colors: ['red'], theme: 'darker' };
+    const theme = { theme: 'midnight' }, sync = { shouldSync: () => false };
     const background = { gradientPreset: preset, getLinearGradient: () => 'red',
         addChangeListener: f => listeners.add(f), removeChangeListener: f => listeners.delete(f) };
-    const updates = [], saves = [];
+    const events = [], updates = [];
     const modules = [{ BACKGROUND_GRADIENT_PRESETS_MAP: { 0: preset } },
-        { getLinearGradientForBackgroundGradient: () => 'red' },
-        { updateBackgroundGradientPreset: id => updates.push(id) },
-        { saveClientTheme(value) { saves.push(value); theme.theme = value.theme; } }];
+        { getLinearGradientForBackgroundGradient: () => 'red' }];
+    if (action) modules.push({ updateBackgroundGradientPreset: id => updates.push(id) });
     const stores = { ThemeStore: theme, ClientThemesBackgroundStore: background, SelectivelySyncedUserSettingsStore: sync };
     const metro = { findByProps: key => modules.find(m => key in m), findByStoreName: name => stores[name] };
     const features = { refresh() {}, status: () => ({ ready: true }), withoutTracking: f => f() };
-    const session = createResolver({ metro, features, storage })({ changed() {} });
-    return { session, storage, sync, theme, background, updates, saves, listeners };
+    const session = createResolver({ metro, features, storage: { baseTheme: 'light' }, dispatch: event => events.push(event) })({ changed() {} });
+    return { session, sync, theme, background, events, updates, listeners };
 }
 
-test('base-only drift restores Onyx without losing gradient zero; subscriptions dispose', () => {
+test('gradient restoration leaves Discord menu colors alone, including old saved overrides', () => {
     const f = setup();
-    assert.equal(f.session.read(0).matches, false);
-    f.session.apply(0);
-    assert.deepEqual(f.saves, [{ backgroundGradientPresetId: 0, theme: 'midnight' }]);
     assert.equal(f.session.read(0).matches, true);
-    f.theme.theme = 'dark';
-    assert.equal(f.session.read(0).matches, false);
     f.session.apply(0);
+    assert.equal(f.theme.theme, 'midnight');
+    f.theme.theme = 'light';
     assert.equal(f.session.read(0).matches, true);
+    f.session.apply(0);
+    assert.equal(f.theme.theme, 'light');
+    assert.deepEqual(f.updates, [0, 0]);
     f.session.dispose(); assert.equal(f.listeners.size, 0);
-    f.session.apply(0); assert.equal(f.saves.length, 2);
 });
 
-test('recovery never writes when appearance sync is on or unknown', () => {
-    const f = setup();
-    for (const value of [true, undefined]) {
-        f.sync.shouldSync = () => value;
-        assert.throws(() => f.session.apply(0), /sync is not confirmed off/);
+test('missing action creator uses the same local gradient dispatch as Fake Nitro', () => {
+    const f = setup({ action: false });
+    assert.equal(f.session.diagnostics.writer, 'dispatcher');
+    f.session.apply(0);
+    assert.deepEqual(f.events, [{ type: 'UPDATE_BACKGROUND_GRADIENT_PRESET', presetId: 0 }]);
+    f.session.dispose(); f.session.apply(0);
+    assert.equal(f.events.length, 1);
+});
+
+test('recovery never writes through either route when sync is on or unknown', () => {
+    for (const action of [true, false]) {
+        const f = setup({ action });
+        for (const value of [true, undefined]) {
+            f.sync.shouldSync = () => value;
+            assert.throws(() => f.session.apply(0), /sync is not confirmed off/);
+        }
+        assert.deepEqual(f.events, []); assert.deepEqual(f.updates, []);
+        f.session.dispose();
     }
-    assert.deepEqual(f.updates, []); assert.deepEqual(f.saves, []); f.session.dispose();
-});
-
-test('active Revenge color themes suspend restoration; unreadable base is never guessed', () => {
-    const f = setup(); f.theme.theme = 'bn-theme-3';
-    assert.equal(f.session.read(0).known, false);
-    delete f.theme.theme;
-    assert.equal(f.session.read(0).known, false);
-    f.session.dispose();
-});
-
-test('Light menus survive recovery with a dark gradient without changing the preset', () => {
-    const f = setup();
-    f.storage.baseTheme = 'light';
-    const original = f.background.gradientPreset;
-    f.session.apply(0);
-    assert.equal(f.theme.theme, 'light');
-    assert.equal(f.background.gradientPreset, original);
-    assert.equal(original.theme, 'darker');
-    assert.equal(f.session.read(0).matches, true);
-    f.theme.theme = 'midnight';
-    assert.equal(f.session.read(0).matches, false);
-    f.session.apply(0);
-    assert.equal(f.theme.theme, 'light');
-    assert.equal(f.session.read(0).matches, true);
-    f.session.dispose();
 });

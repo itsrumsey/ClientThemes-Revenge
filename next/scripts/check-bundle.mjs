@@ -37,9 +37,9 @@ const nodes = tree => !tree || typeof tree !== 'object' ? [] : Array.isArray(tre
 const render = () => { hookIndex = 0; return nodes(options.SettingsComponent({ api })); };
 let tree = render();
 assert.equal(tree[0].type, context.revenge.components.Page);
-assert.equal(tree.filter(n => n.type === Design.TableRadioRow).length, 6, 'follow Discord plus five menu options are visible immediately');
+assert.equal(tree.filter(n => n.type === Design.TableRadioRow).length, 1, 'follow Discord is visible without a loaded gradient catalog');
 const groups = tree.filter(n => n.type === Design.TableRadioGroup);
-assert.equal(groups.length, 2);
+assert.equal(groups.length, 1);
 for (const group of groups) {
     const directRows = group.children.flat(Infinity);
     assert.ok(directRows.length > 0);
@@ -47,8 +47,9 @@ for (const group of groups) {
     assert.equal(typeof group.props.onChange, 'function');
 }
 assert.ok(groups.some(g => g.props.title === 'Gradient'));
-assert.ok(groups.some(g => g.props.title === 'Menu colors'));
+assert.ok(!groups.some(g => g.props.title === 'Menu colors'), 'menu-color selector is removed');
+assert.ok(tree.some(n => n.props.label === 'Menu colors' && !n.props.onPress), 'native Discord picker guidance is informational');
 assert.ok(tree.some(n => n.type === TableRow && n.props.subLabel === 'https://github.com/itsrumsey/ClientThemes-Revenge'));
 render();
 assert.ok(storageReads >= 2);
-console.log('Compiled settings supply direct native radio rows and both selectors are visible initially.');
+console.log('Compiled settings supply direct native radio rows and the gradient selector is visible initially.');

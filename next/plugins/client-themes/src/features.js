@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 // sapphire/aeongdesu ClientThemes behavior adapted to Next, independent of recovery.
 import { validId } from './state.js';
-import { withBaseTheme } from './base-theme.js';
 
 export function createFeatures({ metro, patcher, storage, selected, log = () => {} }) {
     const disposers = [], installed = new Set(), errors = {};
@@ -25,7 +24,7 @@ export function createFeatures({ metro, patcher, storage, selected, log = () => 
             appearanceSync: installed.has('appearanceSync') && syncConfirmed,
             experiment: installed.has('experiment'),
             picker: installed.has('explicitPicker') || installed.has('legacyPicker') };
-        const missing = ['entitlement', 'appearanceSync', 'picker'].filter(key => !capabilities[key]);
+        const missing = ['entitlement', 'appearanceSync'].filter(key => !capabilities[key]);
         return { ready: missing.length === 0, capabilities, missing, errors: { ...errors } };
     }
     function report() {
@@ -97,9 +96,7 @@ export function createFeatures({ metro, patcher, storage, selected, log = () => 
             attempt('explicitPicker', () => {
                 const target = requireMethod(metro.findByProps('handleSaveTheme'), 'handleSaveTheme');
                 disposers.push(patcher.before('handleSaveTheme', target, args => {
-                    // Optional base theme: Discord then saves it with the gradient (no extra write).
-                    const descriptor = withBaseTheme(args[0], { storage, metro });
-                    if (descriptor !== args[0]) args[0] = descriptor;
+                    // Observe native choices without rewriting Discord's base theme.
                     recordDescriptor(args);
                 }));
                 // This second method is optional; failure must not undo the primary picker hook.

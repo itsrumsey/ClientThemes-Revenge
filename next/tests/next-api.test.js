@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createMetro, createPatcher, createStorage } from '../plugins/client-themes/src/next-api.js';
+import { createMetro, createPatcher, createStorage, watchThemeModules } from '../plugins/client-themes/src/next-api.js';
 import { createRuntime } from '../plugins/client-themes/src/runtime.js';
 import { createFeatures } from '../plugins/client-themes/src/features.js';
 import { fixture } from './runtime-fixture.js';
@@ -40,7 +40,12 @@ test('Next finder adapter unwraps tuples without initializing Discord modules', 
     const options = [];
     const metro = createMetro({ filters: { withProps: (...p) => p },
         lookupModule(filter, opts) { options.push(opts); return filter.includes('missing') ? [] : [props, 1]; },
-        *lookupModules(filter, opts) { options.push(opts); yield [store, 2]; }
+        *lookupModules(filter, opts) {
+            options.push(opts);
+            yield [undefined, 0]; // Cached uninitialized candidate must not mask a live one.
+            if (filter.includes('getName')) yield [store, 2];
+            else if (filter.includes('method')) yield [props, 1];
+        }
     });
     assert.equal(metro.findByProps('method'), props);
     assert.equal(metro.findByProps('missing'), undefined);
@@ -129,4 +134,68 @@ test('fallback uses Next’s four standard picker indices and expires unpaired s
     f.modules[0].updateBackgroundGradientPreset(4);
     assert.deepEqual(f.selections, [null, 0]);
     f.close();
+});
+
+test('missing native picker tracking does not disable plugin gradient selection', () => {
+    const f = fixture();
+    delete f.modules[3].handleSaveTheme;
+    delete f.modules[0].updateMobilePendingThemeIndex;
+    f.features.refresh();
+    assert.equal(f.features.status().ready, true);
+    assert.equal(f.features.status().capabilities.picker, false);
+    assert.deepEqual(f.features.status().missing, []);
+    f.close();
+});
+
+test('lazy Next module watchers react once per module and dispose late callbacks', () => {
+    const callbacks = [], unsubs = [];
+    let ready = 0;
+    const off = watchThemeModules({ filters: { withProps: key => key }, getModules(filter, callback, options) {
+        assert.equal(options.initialize, false);
+        callbacks.push(callback);
+        return () => unsubs.push(filter);
+    } }, () => ready++);
+    const module = { handleSaveTheme() {} };
+    callbacks[0](undefined);
+    callbacks[0](module); callbacks[1](module);
+    assert.equal(ready, 1);
+    off(); off();
+    callbacks[2]({});
+    assert.equal(ready, 1);
+    assert.equal(unsubs.length, callbacks.length);
+});
+
+test('native picker base descriptors are not rewritten by a legacy saved override', () => {
+    const f = fixture({ storage: { baseTheme: 'light' } });
+    let received;
+    f.modules[3].handleSaveTheme = descriptor => { received = descriptor; };
+    f.features.refresh();
+    const descriptor = { id: 4, theme: 'midnight' };
+    f.modules[3].handleSaveTheme(descriptor);
+    assert.equal(received, descriptor);
+    assert.equal(received.theme, 'midnight');
+    f.close();
+});
+
+test('upgrade retires old menu override but preserves gradient intent and Discord theme', async () => {
+    const disk = { baseTheme: 'light', selection: { version: 1, enabled: true, presetId: 0 } };
+    const theme = { getName: () => 'ThemeStore', theme: 'midnight' };
+    const modules = [theme, { CLIENT_THEMES: 'themes', canUserUse: () => false },
+        { setShouldSyncAppearanceSettings() {} },
+        { getName: () => 'SelectivelySyncedUserSettingsStore', shouldSync: () => false }];
+    const runtime = createRuntime({ jsonStorage: {
+        get: async () => disk, set: async value => { Object.assign(disk, value); }
+    }, unscoped: { modules: { finders: {
+        filters: { withProps: (...keys) => keys },
+        *lookupModules(keys) { for (const module of modules) if (keys.every(key => key in module)) yield [module, 1]; }
+    } }, patcher: nextPatcher() } }, {
+        currentState: 'background', addEventListener() { return { remove() {} }; }
+    });
+    await runtime.start();
+    assert.equal(runtime.inspect().selection.presetId, 0);
+    await runtime.dispose();
+    assert.equal(disk.baseTheme, null);
+    assert.equal(disk.selection.enabled, true);
+    assert.equal(disk.selection.presetId, 0);
+    assert.equal(theme.theme, 'midnight');
 });

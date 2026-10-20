@@ -6,7 +6,6 @@ import Page from '@revenge-mod/components/Page';
 import { TableRowAssetIcon } from '@revenge-mod/components';
 import { Design } from '@revenge-mod/discord/design';
 import { runtime } from './index.js';
-import { BASE_THEMES } from './base-theme.js';
 
 const REPOSITORY = 'https://github.com/itsrumsey/ClientThemes-Revenge';
 
@@ -22,13 +21,8 @@ export function SettingsComponent({ api }) {
     const selectedId = state?.selection?.enabled ? state.selection.presetId : -1;
     const selectedName = selectedId === -1 ? 'Follow Discord appearance'
         : catalog.find(p => p.id === selectedId)?.name ?? `Preset ${selectedId}`;
-    const base = state?.baseTheme ?? 'default';
     const select = id => {
         runtime?.choose(id === -1 ? null : id);
-        refresh();
-    };
-    const chooseBase = value => {
-        setMessage(runtime?.setBase(value === 'default' ? null : value) ?? 'Plugin is loading.');
         refresh();
     };
     const status = state?.status === 'gradient-restored' ? 'Restored'
@@ -50,19 +44,16 @@ export function SettingsComponent({ api }) {
                     row('waiting', { label: 'Gradient list not ready',
                         subLabel: 'Open Discord’s appearance settings, then return and tap Restore now to retry loading the gradient list.' })
                 )]),
-                h(TableRadioGroup, { key: `base-${base}`, title: 'Menu colors',
-                    description: 'Choose menu colors independently of your gradient.',
-                    defaultValue: base, onChange: chooseBase },
-                    h(TableRadioRow, { label: 'Discord default',
-                        subLabel: 'Use your gradient’s original menu colors.', value: 'default' }),
-                    ...BASE_THEMES.map(t => h(TableRadioRow, { key: t.value, label: t.label, value: t.value }))
+                h(TableRowGroup, { title: 'Discord appearance' },
+                    row('base-help', { label: 'Menu colors',
+                        subLabel: 'Choose Light, Ash, Dark or Onyx in Discord’s normal appearance picker. This plugin only restores your gradient.' })
                 ),
                 ...(message ? [h(TableRowGroup, { key: 'feedback' }, row('feedback', {
-                    label: 'Menu colors', subLabel: message
+                    label: 'Notice', subLabel: message
                 }))] : []),
                 h(TableRowGroup, { title: 'Restoration' },
                     row('status', {
-                        label: 'Saved appearance', subLabel: 'Menu colors and your gradient are selected independently.',
+                        label: 'Saved gradient', subLabel: 'Your base theme stays under Discord’s control.',
                         trailing: h(TableRow.TrailingText, { text: status })
                     }),
                     row('retry', {
@@ -74,9 +65,10 @@ export function SettingsComponent({ api }) {
                 ),
                 ...(showDetails ? [h(TableRowGroup, { key: 'details', title: 'Restoration details' },
                     row('recovery', { label: 'Status', subLabel: state?.status ?? 'Loading' }),
-                    ...(state?.detail?.reason ? [row('reason', { label: 'Restoration paused because', subLabel: state.detail.reason })] : []),
+                    ...(state?.detail?.reason ? [row('reason', { label: state?.circuit ? 'Restoration paused because' : 'Waiting because', subLabel: state.detail.reason })] : []),
                     row('unlock', { label: 'Theme unlock', subLabel: state?.unlock?.ready ? 'Ready'
                         : state?.unlock?.missing.join(', ') ?? 'Loading' }),
+                    row('native-picker', { label: 'Native picker tracking', subLabel: state?.unlock?.capabilities.picker ? 'Ready' : 'Waiting for Discord’s appearance picker. The gradient selector above still works.' }),
                     ...(state?.error ? [row('error', { label: 'Last error', subLabel: state.error })] : []),
                     row('refresh', { label: 'Refresh status', onPress: refresh }),
                     row('limits', { label: 'About restoration',
