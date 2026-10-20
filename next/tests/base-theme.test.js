@@ -23,16 +23,16 @@ test('Discord ThemeTypes values: Light, Ash, Dark, Onyx', () => {
         [['Light', 'light'], ['Ash', 'dark'], ['Dark', 'darker'], ['Onyx', 'midnight']]);
 });
 
-test('only base themes of the same lightness as the preset are compatible', () => {
-    for (const base of ['dark', 'darker', 'midnight']) {
-        assert.equal(isCompatible(base, 'darker'), true, base);
-        assert.equal(isCompatible(base, 'light'), false, base);
+test('every menu base works with every known preset base without changing the preset', () => {
+    for (const base of BASE_THEMES) {
+        for (const preset of BASE_THEMES) {
+            assert.equal(isCompatible(base.value, preset.value), true);
+            assert.equal(baseFor(preset.value, base.value), base.value);
+        }
     }
-    assert.equal(isCompatible('light', 'light'), true);
-    assert.equal(isCompatible('light', 'darker'), false);
-    assert.equal(isCompatible('bn-theme-3', 'darker'), false, 'Revenge keys are never a choice');
-    assert.equal(baseFor('darker', 'midnight'), 'midnight');
-    assert.equal(baseFor('darker', 'light'), 'darker', 'incompatible choice falls back to the preset base');
+    assert.equal(isCompatible('bn-theme-3', 'darker'), false);
+    assert.equal(isCompatible('light', 'unknown'), false);
+    assert.equal(baseFor('darker', 'unknown'), 'darker');
     assert.equal(baseFor('light', null), 'light');
 });
 
@@ -55,8 +55,6 @@ test('native descriptor is left alone when nothing applies', () => {
     const { metro } = discord();
     const same = (descriptor, storage, m = metro) => assert.equal(withBaseTheme(descriptor, { storage, metro: m }), descriptor);
     same(DARK_PRESET, {});                                              // Discord default
-    same(DARK_PRESET, { baseTheme: 'light' });                          // incompatible with a dark gradient
-    same(LIGHT_PRESET, { baseTheme: 'midnight' });                      // incompatible with a light gradient
     same(DARK_PRESET, { baseTheme: 'darker' });                         // already the preset base
     same({ type: 'standardBackgroundTheme', theme: 'light' }, { baseTheme: 'midnight' }); // not a gradient
     same({ id: 22, theme: 'darker', customThemeSettings: {} }, { baseTheme: 'midnight' }); // custom theme
@@ -86,11 +84,11 @@ test('apply now: calls Discord saveClientTheme once with the current preset and 
     assert.match(result.reason, /Ash/);
 });
 
-test('apply now: Discord default restores the preset base; incompatible choice falls back to it', () => {
+test('apply now: Discord default restores preset base; explicit Light overrides a dark preset', () => {
     const d = discord({ baseTheme: 'midnight' });
     applyBaseTheme({ storage: {}, metro: d.metro });
     applyBaseTheme({ storage: { baseTheme: 'light' }, metro: d.metro });
-    assert.deepEqual(d.saves, [{ backgroundGradientPresetId: 22, theme: 'darker' }, { backgroundGradientPresetId: 22, theme: 'darker' }]);
+    assert.deepEqual(d.saves, [{ backgroundGradientPresetId: 22, theme: 'darker' }, { backgroundGradientPresetId: 22, theme: 'light' }]);
 });
 
 test('apply now never writes when sync is on or unknown, a Revenge theme is active, or no gradient is shown', () => {
@@ -115,4 +113,16 @@ test('apply now reports, rather than throws, when a Discord lookup fails', () =>
     const result = applyBaseTheme({ storage: { baseTheme: 'midnight' }, metro });
     assert.equal(result.applied, false);
     assert.match(result.reason, /failed: Error: boom/);
+});
+
+test('native picker applies cross-lightness base on a copy and preserves gradient ID/colors', () => {
+    const { metro } = discord();
+    for (const [preset, choice] of [[DARK_PRESET, 'light'], [LIGHT_PRESET, 'midnight']]) {
+        const out = withBaseTheme(preset, { storage: { baseTheme: choice }, metro });
+        assert.equal(out.theme, choice);
+        assert.equal(out.id, preset.id);
+        assert.equal(out.colors, preset.colors);
+        assert.notEqual(out, preset);
+        assert.notEqual(preset.theme, choice);
+    }
 });

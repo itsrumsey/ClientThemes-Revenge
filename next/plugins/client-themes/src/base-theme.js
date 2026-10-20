@@ -4,8 +4,7 @@
 // Discord saves each gradient preset with a fixed base theme (dark presets "darker", light presets
 // "light"; ClientThemesConstants). Settings and other non-gradient surfaces use that base theme, while
 // gradient-aware colors take light/dark from the preset itself (theme-context flags), not from the base.
-// So a base theme of the same lightness changes only the neutral surfaces. Mixed lightness would put
-// dark text on dark gradient surfaces (or the reverse) and is never applied.
+// The menu base is chosen independently of the gradient preset; the preset itself is not modified.
 import { validId } from "./state.js";
 
 // Discord ThemeTypes values (discord_common/.../ThemeTypes.tsx: ASH "dark", DARK "darker", ONYX "midnight").
@@ -16,7 +15,6 @@ export const BASE_THEMES = [
     { value: "midnight", label: "Onyx" }
 ];
 const KNOWN = new Set(BASE_THEMES.map(t => t.value));
-const isLight = theme => theme === "light";
 const REVENGE_THEME_PREFIX = "bn-theme-";
 
 /** The saved choice, or null for Discord's default. Unknown values are ignored, never guessed. */
@@ -27,7 +25,7 @@ export function savedBaseTheme(storage) {
 
 /** Whether `base` can be used with a preset whose own base theme is `presetTheme`. */
 export function isCompatible(base, presetTheme) {
-    return KNOWN.has(base) && KNOWN.has(presetTheme) && isLight(base) === isLight(presetTheme);
+    return KNOWN.has(base) && KNOWN.has(presetTheme);
 }
 
 /** Base theme to save for a preset: the compatible choice, otherwise the preset's own. */
@@ -44,7 +42,7 @@ function revengeThemeActive(metro) {
 
 /**
  * For Discord's native save handler: returns a copy of a gradient-preset descriptor carrying the chosen
- * base theme, or the original descriptor when nothing applies (no choice, not a preset, incompatible,
+ * base theme, or the original descriptor when nothing applies (no choice, not a preset, unknown preset theme,
  * custom theme, or a Revenge color theme is active).
  */
 export function withBaseTheme(descriptor, { storage, metro }) {
@@ -83,9 +81,7 @@ export function applyBaseTheme({ storage, metro }) {
             Promise.resolve(result).catch(error => console.error('[ClientThemes Next] Base theme save failed', error));
             return { applied: false, reason: 'Base theme save is asynchronous; awaiting store confirmation.' };
         }
-        const compatible = choice == null || isCompatible(choice, preset.theme);
-        return { applied: true, reason: compatible ? `Base theme set to ${label(theme)}.`
-            : `${label(choice)} does not match this ${isLight(preset.theme) ? "light" : "dark"} gradient; using ${label(theme)}.` };
+        return { applied: true, reason: `Base theme set to ${label(theme)}.` };
     } catch (error) {
         return { applied: false, reason: `Base theme change failed: ${String(error)}` };
     }

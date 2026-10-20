@@ -50,3 +50,20 @@ test('active Revenge color themes suspend restoration; unreadable base is never 
     assert.equal(f.session.read(0).known, false);
     f.session.dispose();
 });
+
+test('Light menus survive recovery with a dark gradient without changing the preset', () => {
+    const f = setup();
+    f.storage.baseTheme = 'light';
+    const original = f.background.gradientPreset;
+    f.session.apply(0);
+    assert.equal(f.theme.theme, 'light');
+    assert.equal(f.background.gradientPreset, original);
+    assert.equal(original.theme, 'darker');
+    assert.equal(f.session.read(0).matches, true);
+    f.theme.theme = 'midnight';
+    assert.equal(f.session.read(0).matches, false);
+    f.session.apply(0);
+    assert.equal(f.theme.theme, 'light');
+    assert.equal(f.session.read(0).matches, true);
+    f.session.dispose();
+});

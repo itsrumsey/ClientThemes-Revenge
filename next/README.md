@@ -12,8 +12,8 @@ overwrite the saved selection. Native picker capture is preferred; the older pic
 fallback uses Next’s four standard theme indices and only accepts paired updates
 within the same JS turn. If that private contract changes, select in plugin settings.
 
-Choose a base theme of Light, Ash, Dark or Onyx in plugin settings. Only choices with
-the same lightness as the gradient apply. Both gradient drift and a changed base
+Choose Light, Ash, Dark or Onyx for menus independently of the selected gradient.
+Every base is available with every gradient; the gradient preset itself is unchanged. Both gradient drift and a changed base
 theme are recovered. Appearance sync must be confirmed off before recovery writes;
 its readable previous preference is restored on disable. A detected `bn-theme-*`
 Revenge color theme pauses restoration; no Revenge theme is changed automatically.
@@ -62,7 +62,7 @@ can be tested with `npm run serve`. No Next repository has been published by thi
 change, and the existing Revenge Pages URL remains for the legacy plugin only.
 
 Disable other ClientThemes/Fake Nitro theme patches before testing this one. Open
-the plugin settings, choose a preset, then choose a compatible base. Next uses a new
+the plugin settings, choose a preset, then choose any menu base. Next uses a new
 plugin ID and JSON storage; it cannot automatically read legacy per-URL storage.
 Reselect your existing gradient and base once. Keeping that same Next ID preserves
 the new preferences through updates. Uninstalling may remove plugin storage.
@@ -77,7 +77,7 @@ the environment proxy cannot be reached and dependencies cannot be installed.
 
 Physical device: untested on Revenge Next. Before treating this as working, test
 native gradient unlock, selection in Discord’s picker, preset 0, cold restart,
-foreground return, drift recovery, each compatible base, explicit standard theme
+foreground return, drift recovery, each menu base, explicit standard theme
 selection, background inactivity, disabling and reenabling. Confirm the settings
 screen shows ready unlock and gradient-restored status. That status verifies store
 state, not every screen’s painted colors. Capture `[ClientThemes Next]` logs on
@@ -101,3 +101,9 @@ original m4fn3/FreeNitroTheme credit retained. Next unlock approach by PalmDevs.
 
 Packaging layout checked against revenge-mod/revenge-plugin-template commit
 `463fdee38bd22eec06bc02d2539e22168d5796fe` (JS-only manifest and Gradle ZIP task).
+
+Preview2 removes the light/dark compatibility restriction from the settings buttons,
+native picker descriptor and recovery base selection. The plugin ID stays unchanged
+so updating preserves the saved gradient and base. The user confirmed cold-start
+persistence and base-menu selection on preview1; cross-lightness combinations in
+preview2 still require device confirmation.
