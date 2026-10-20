@@ -28,6 +28,7 @@ npm install --ignore-scripts --legacy-peer-deps
 npm test
 npm run build
 node scripts/check-bundle.mjs
+python3 -m unittest discover -s tests -p '*_test.py' -v
 python3 scripts/package.py
 ```
 
@@ -43,7 +44,18 @@ dependencies are not locked yet, since local package installation is unavailable
 
 ## Installing after review
 
-This is a Next plugin ZIP, not a legacy URL plugin. Distribute it through a Next
+Download the **ClientThemes-Next-installable** artifact from the successful Next
+review workflow and import that downloaded ZIP directly in Next. Its root contains
+`manifest.json` and `index.js`, matching the official JS-only template. CI downloads
+that exact Actions ZIP again and checks both entries before reporting success.
+
+The earlier **ClientThemes-Next-review** artifact was a ZIP containing the plugin
+ZIP. Installing the outer ZIP fails with "missing manifest.json". For that older
+download, extract it once and install `itsrumsey.client-themes-next@0.1.0-preview1.zip`
+inside. New artifacts upload the plugin contents, avoiding that wrapper entirely.
+
+
+This is a Next plugin ZIP, not a legacy URL plugin. Alternatively distribute it through a Next
 plugin repository index using the official CLI (`npm run generate-index -- --help`
 for the pinned CLI’s options), then add that repository in Next. A local repository
 can be tested with `npm run serve`. No Next repository has been published by this
@@ -86,3 +98,6 @@ failure; retry recovery after fixing the missing contract.
 
 GPL-3.0; see LICENSE. Original ClientThemes author sapphire / aeongdesu;
 original m4fn3/FreeNitroTheme credit retained. Next unlock approach by PalmDevs.
+
+Packaging layout checked against revenge-mod/revenge-plugin-template commit
+`463fdee38bd22eec06bc02d2539e22168d5796fe` (JS-only manifest and Gradle ZIP task).

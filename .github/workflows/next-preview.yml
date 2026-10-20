@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,9 +25,17 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: node scripts/check-bundle.mjs
+      - run: python3 -m unittest discover -s tests -p '*_test.py' -v
       - run: python3 scripts/package.py
       - uses: actions/upload-artifact@v4
+        id: install
         with:
-          name: ClientThemes-Next-review
-          path: next/build/dist/*.zip
+          name: ClientThemes-Next-installable
+          path: next/build/install/
           if-no-files-found: error
+      - name: Verify the actual downloaded Actions ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/actions/artifacts/${{ steps.install.outputs.artifact-id }}/zip > build/downloaded-artifact.zip
+          python3 -c "from scripts.package import validate_package; validate_package('build/downloaded-artifact.zip'); print('Downloaded ZIP has root manifest and script')"
