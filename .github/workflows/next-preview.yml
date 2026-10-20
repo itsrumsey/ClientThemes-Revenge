@@ -40,8 +40,8 @@ jobs:
           gh api repos/${{ github.repository }}/actions/artifacts/${{ steps.install.outputs.artifact-id }}/zip > build/downloaded-artifact.zip
           python3 -c "from scripts.package import validate_package; validate_package('build/downloaded-artifact.zip'); print('Downloaded ZIP has root manifest and script')"
 
-  publish-preview6:
-    if: github.event_name == 'push' && github.event.head_commit.message == 'Publish ClientThemes Next preview6 using Discord menu themes'
+  publish-preview7:
+    if: github.event_name == 'push' && github.event.head_commit.message == 'Publish ClientThemes Next preview7 correcting selector removal'
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -63,37 +63,37 @@ jobs:
           sys.path.insert(0, 'next/scripts')
           from package import validate_package
           root = pathlib.Path('release/plugin')
-          target = pathlib.Path('release/ClientThemes-Next-0.1.0-preview6.zip')
+          target = pathlib.Path('release/ClientThemes-Next-0.1.0-preview7.zip')
           with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED) as archive:
               for path in sorted(root.rglob('*')):
                   if path.is_file():
                       archive.write(path, path.relative_to(root))
           manifest = validate_package(target)
-          assert manifest['version'] == '0.1.0-preview6'
+          assert manifest['version'] == '0.1.0-preview7'
           PY
       - name: Publish the requested public preview release
         env:
           RELEASE_TARGET: ${{ github.sha }}
         run: |
           cat > release/notes.md <<'NOTES'
-          ClientThemes Next with persistent gradients; menu colors are controlled by Discord’s normal appearance picker.
+          ClientThemes Next: choose named themes in Discord; select Light, Ash, Dark or Onyx menu colors in the plugin.
           
-          Removes the plugin-specific menu-color selector and stops applying its saved override. Discord’s base-theme choices are no longer rewritten or restored by this plugin. Gradient recovery can use Fake Nitro’s local dispatcher action when the action-creator module is not loaded, and native picker tracking no longer gates restoration. Lazy module subscriptions can recover a readiness wait; bounded write-loop protection remains.
+          Corrects the reversed selector removal in preview6. Restores the menu-color radio group (Discord default, Light, Ash, Dark, Onyx) and its persistence. Removes the long list of named themes such as Mint Apple and Citrus Sherbert; select those in Discord’s native appearance picker. Keeps the local-dispatch fallback, lazy-module subscriptions, native UI styling and restoration safeguards.
           
-          Download ClientThemes-Next-0.1.0-preview6.zip below and import it directly into Revenge Next. Update the existing plugin to preserve its settings.
+          Download ClientThemes-Next-0.1.0-preview7.zip below and import it directly into Revenge Next. Update the existing plugin to preserve its settings.
           
           This release is for Revenge Next. Revenge Classic plugin files and installation URLs are unchanged.
           
-          Built using the pinned official Next CLI; automated tests, bundle registration, ZIP structure and downloadable artifact verification passed before publication. The removed menu-color feature is no longer enforced. Runtime behavior on the user’s exact Discord version still needs confirmation.
+          Built using the pinned official Next CLI; automated tests, bundle registration, ZIP structure and downloadable artifact verification passed before publication. If preview6 cleared your menu preference, select it once again. The compiled UI check enforces exactly five menu options and no named-theme selector. Device confirmation remains needed.
           
           GPL-3.0. Credits: PalmDevs, sapphire / aeongdesu, and m4fn3 / FreeNitroTheme. Corresponding plugin source is included in the ZIP.
           NOTES
-          if ! gh release view next-v0.1.0-preview6 >/dev/null 2>&1; then
-            gh release create next-v0.1.0-preview6 release/ClientThemes-Next-0.1.0-preview6.zip --draft --prerelease --target "$RELEASE_TARGET" --title "ClientThemes Next 0.1.0-preview6" --notes-file release/notes.md
-            gh release edit next-v0.1.0-preview6 --draft=false
+          if ! gh release view next-v0.1.0-preview7 >/dev/null 2>&1; then
+            gh release create next-v0.1.0-preview7 release/ClientThemes-Next-0.1.0-preview7.zip --draft --prerelease --target "$RELEASE_TARGET" --title "ClientThemes Next 0.1.0-preview7" --notes-file release/notes.md
+            gh release edit next-v0.1.0-preview7 --draft=false
           fi
       - name: Verify anonymous download and ZIP integrity
         run: |
-          curl --fail --location --retry 5 --retry-all-errors --retry-delay 3 "https://github.com/${{ github.repository }}/releases/download/next-v0.1.0-preview6/ClientThemes-Next-0.1.0-preview6.zip" --output release/public-download.zip
-          cmp release/ClientThemes-Next-0.1.0-preview6.zip release/public-download.zip
+          curl --fail --location --retry 5 --retry-all-errors --retry-delay 3 "https://github.com/${{ github.repository }}/releases/download/next-v0.1.0-preview7/ClientThemes-Next-0.1.0-preview7.zip" --output release/public-download.zip
+          cmp release/ClientThemes-Next-0.1.0-preview7.zip release/public-download.zip
           python3 -c "import sys; sys.path.insert(0, 'next/scripts'); from package import validate_package; validate_package('release/public-download.zip')"

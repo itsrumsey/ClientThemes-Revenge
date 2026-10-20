@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0
 import { validId } from "./state.js";
+import { applyBaseTheme, baseFor, savedBaseTheme } from './base-theme.js';
 
 // Guarded Discord-private contracts; source evidence is in docs/AUDIT.md.
-export function createResolver({ metro, features, dispatch, onCatalog = () => {} }) {
+export function createResolver({ metro, features, storage, dispatch, onCatalog = () => {} }) {
     return function resolve({ changed, selected, enabled }) {
         features.refresh();
         const actions = metro.findByProps("updateBackgroundGradientPreset");
@@ -51,12 +52,15 @@ export function createResolver({ metro, features, dispatch, onCatalog = () => {}
                     if (typeof expected !== "string" || !expected || /undefined|NaN|null/.test(expected)) {
                         return { known: false, reason: "Preset color tokens no longer resolve" };
                     }
+                    const choice = savedBaseTheme(storage);
                     const theme = metro.findByStoreName('ThemeStore')?.theme;
                     if (typeof theme === 'string' && theme.startsWith('bn-theme-')) {
                         return { known: false, reason: 'A Revenge color theme is active; disable it before restoring gradients' };
                     }
+                    if (choice !== null && typeof theme !== 'string') return { known: false, reason: 'Current menu base is unreadable' };
                     return { known: true, presetId: preset?.id ?? null,
-                        matches: preset?.id === id && gradient === expected };
+                        matches: preset?.id === id && gradient === expected
+                            && (choice === null || theme === baseFor(presets[id].theme, choice)) };
                 } catch (error) {
                     return { known: false, reason: `Live gradient read failed: ${String(error)}` };
                 }
@@ -66,12 +70,16 @@ export function createResolver({ metro, features, dispatch, onCatalog = () => {}
                 const synced = metro.findByStoreName('SelectivelySyncedUserSettingsStore');
                 if (synced?.shouldSync?.('appearance') !== false) throw Error('Appearance sync is not confirmed off');
                 return features.withoutTracking(() => {
-                    if (typeof actions?.updateBackgroundGradientPreset === 'function') {
-                        return actions.updateBackgroundGradientPreset(id);
-                    }
-                    // Same local-only action used by Fake Nitro on Next. The
-                    // action-creator module may not have initialized yet.
-                    return dispatch({ type: 'UPDATE_BACKGROUND_GRADIENT_PRESET', presetId: id });
+                    const update = typeof actions?.updateBackgroundGradientPreset === 'function'
+                        ? actions.updateBackgroundGradientPreset(id)
+                        : dispatch({ type: 'UPDATE_BACKGROUND_GRADIENT_PRESET', presetId: id });
+                    const applyMenu = () => {
+                        if (disposed || savedBaseTheme(storage) === null) return;
+                        const result = applyBaseTheme({ storage, metro });
+                        if (!result.applied) throw Error(result.reason);
+                    };
+                    if (update && typeof update.then === 'function') return Promise.resolve(update).then(applyMenu);
+                    return applyMenu();
                 });
             },
             featureStatus: features.status,

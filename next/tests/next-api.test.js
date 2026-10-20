@@ -165,19 +165,21 @@ test('lazy Next module watchers react once per module and dispose late callbacks
     assert.equal(unsubs.length, callbacks.length);
 });
 
-test('native picker base descriptors are not rewritten by a legacy saved override', () => {
+test('native theme picker retains preset ID while applying the selected menu color', () => {
     const f = fixture({ storage: { baseTheme: 'light' } });
     let received;
     f.modules[3].handleSaveTheme = descriptor => { received = descriptor; };
     f.features.refresh();
     const descriptor = { id: 4, theme: 'midnight' };
     f.modules[3].handleSaveTheme(descriptor);
-    assert.equal(received, descriptor);
-    assert.equal(received.theme, 'midnight');
+    assert.notEqual(received, descriptor);
+    assert.equal(received.id, 4);
+    assert.equal(received.theme, 'light');
+    assert.equal(descriptor.theme, 'midnight');
     f.close();
 });
 
-test('upgrade retires old menu override but preserves gradient intent and Discord theme', async () => {
+test('upgrade preserves menu preference and gradient intent without background writes', async () => {
     const disk = { baseTheme: 'light', selection: { version: 1, enabled: true, presetId: 0 } };
     const theme = { getName: () => 'ThemeStore', theme: 'midnight' };
     const modules = [theme, { CLIENT_THEMES: 'themes', canUserUse: () => false },
@@ -194,7 +196,7 @@ test('upgrade retires old menu override but preserves gradient intent and Discor
     await runtime.start();
     assert.equal(runtime.inspect().selection.presetId, 0);
     await runtime.dispose();
-    assert.equal(disk.baseTheme, null);
+    assert.equal(disk.baseTheme, 'light');
     assert.equal(disk.selection.enabled, true);
     assert.equal(disk.selection.presetId, 0);
     assert.equal(theme.theme, 'midnight');

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 // sapphire/aeongdesu ClientThemes behavior adapted to Next, independent of recovery.
 import { validId } from './state.js';
+import { withBaseTheme } from './base-theme.js';
 
 export function createFeatures({ metro, patcher, storage, selected, log = () => {} }) {
     const disposers = [], installed = new Set(), errors = {};
@@ -96,7 +97,8 @@ export function createFeatures({ metro, patcher, storage, selected, log = () => 
             attempt('explicitPicker', () => {
                 const target = requireMethod(metro.findByProps('handleSaveTheme'), 'handleSaveTheme');
                 disposers.push(patcher.before('handleSaveTheme', target, args => {
-                    // Observe native choices without rewriting Discord's base theme.
+                    const descriptor = withBaseTheme(args[0], { storage, metro });
+                    if (descriptor !== args[0]) args[0] = descriptor;
                     recordDescriptor(args);
                 }));
                 // This second method is optional; failure must not undo the primary picker hook.
