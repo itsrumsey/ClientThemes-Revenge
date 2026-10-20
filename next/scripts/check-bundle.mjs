@@ -37,10 +37,18 @@ const nodes = tree => !tree || typeof tree !== 'object' ? [] : Array.isArray(tre
 const render = () => { hookIndex = 0; return nodes(options.SettingsComponent({ api })); };
 let tree = render();
 assert.equal(tree[0].type, context.revenge.components.Page);
-assert.equal(tree.filter(n => n.type === Design.TableRadioRow).length, 5, 'default plus four independent menu bases');
+assert.equal(tree.filter(n => n.type === Design.TableRadioRow).length, 6, 'follow Discord plus five menu options are visible immediately');
+const groups = tree.filter(n => n.type === Design.TableRadioGroup);
+assert.equal(groups.length, 2);
+for (const group of groups) {
+    const directRows = group.children.flat(Infinity);
+    assert.ok(directRows.length > 0);
+    assert.ok(directRows.every(n => n.type === Design.TableRadioRow), 'Discord radio groups require direct radio-row children, no nested TableRowGroup');
+    assert.equal(typeof group.props.onChange, 'function');
+}
+assert.ok(groups.some(g => g.props.title === 'Gradient'));
+assert.ok(groups.some(g => g.props.title === 'Menu colors'));
 assert.ok(tree.some(n => n.type === TableRow && n.props.subLabel === 'https://github.com/itsrumsey/ClientThemes-Revenge'));
-tree.find(n => n.props.label === 'Selected gradient').props.onPress();
-tree = render();
-assert.ok(tree.some(n => n.type === Design.TableRadioRow && n.props.value === -1), 'gradient chooser opens with follow-Discord option');
-assert.ok(storageReads >= 2, 'native picker storage changes can re-render settings');
-console.log('Compiled settings render with native Next Page, table groups and radio rows.');
+render();
+assert.ok(storageReads >= 2);
+console.log('Compiled settings supply direct native radio rows and both selectors are visible initially.');

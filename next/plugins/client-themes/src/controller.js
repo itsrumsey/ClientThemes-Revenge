@@ -8,15 +8,15 @@ const BACKOFF = [250, 500, 1000, 2000, 4000, 8000, 15000];
  */
 export function createController({ storage, resolve, lifecycle, log = () => {},
     clock = { now: Date.now, set: setTimeout, clear: clearTimeout }, verifyMs = 30000 }) {
-    let selection;
+    let selection, detail = {};
     let running = false, active = false, busy = false, applying = false;
     let generation = 0, timer = null, pending = false, session = null, offLifecycle;
     let startupTimer = null, startupProbe = 0, startupFinished = false, provisional = false;
     let confirmation = null;
     let failures = 0, circuit = false, writes = [], status = "stopped", lastLog = "", notBefore = 0;
 
-    const report = (code, detail = {}) => {
-        status = code;
+    const report = (code, nextDetail = {}) => {
+        status = code; detail = nextDetail;
         // Deduplicate recurring diagnostic states; recovery writes are rate bounded.
         if (code !== lastLog) { lastLog = code; log(code, detail); }
     };
@@ -207,6 +207,6 @@ export function createController({ storage, resolve, lifecycle, log = () => {},
         },
         choose,
         recheck: () => enqueue(),
-        inspect: () => ({ status, selection, failures, circuit, active, running })
+        inspect: () => ({ status, detail, selection, failures, circuit, active, running })
     };
 }

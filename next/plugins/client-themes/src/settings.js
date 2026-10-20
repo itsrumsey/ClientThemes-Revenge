@@ -15,7 +15,6 @@ export function SettingsComponent({ api }) {
     api.jsonStorage.use();
     const [, refresh] = useReducer(n => n + 1, 0);
     const [message, setMessage] = useState('');
-    const [showGradients, setShowGradients] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
     const { Stack, TableRow, TableRowGroup, TableRadioGroup, TableRadioRow } = Design;
     const state = runtime?.inspect();
@@ -26,7 +25,6 @@ export function SettingsComponent({ api }) {
     const base = state?.baseTheme ?? 'default';
     const select = id => {
         runtime?.choose(id === -1 ? null : id);
-        setShowGradients(false);
         refresh();
     };
     const chooseBase = value => {
@@ -42,34 +40,22 @@ export function SettingsComponent({ api }) {
     return h(Page, null,
         h(ScrollView, null,
             h(Stack, { spacing: 24 },
-                h(TableRowGroup, { title: 'Gradient', hasIcons: true },
-                    row('selected-gradient', {
-                        icon: icon('PaintPaletteIcon'), label: 'Selected gradient', subLabel: selectedName,
-                        onPress: () => setShowGradients(!showGradients), arrow: true
-                    }),
-                    row('gradient-help', {
-                        label: 'Keep your gradient',
-                        subLabel: 'Your selection is saved and restored after restarting Discord. You can also choose it in Discord’s appearance settings.'
-                    })
+                h(TableRadioGroup, { key: `gradients-${selectedId}`, title: 'Gradient',
+                    description: `Selected: ${selectedName}`, defaultValue: selectedId, onChange: select },
+                    h(TableRadioRow, { label: 'Follow Discord appearance',
+                        subLabel: 'Stop restoring a saved gradient.', value: -1 }),
+                    ...catalog.map(p => h(TableRadioRow, { key: p.id, label: p.name, value: p.id }))
                 ),
-                ...(showGradients ? [
-                    h(TableRadioGroup, { key: `gradients-${selectedId}`, defaultValue: selectedId, onChange: select },
-                        h(TableRowGroup, { title: 'Choose a gradient' },
-                            h(TableRadioRow, { label: 'Follow Discord appearance',
-                                subLabel: 'Stop restoring a saved gradient.', value: -1 }),
-                            ...catalog.map(p => h(TableRadioRow, { key: p.id, label: p.name, value: p.id })),
-                            ...(catalog.length ? [] : [row('waiting', {
-                                label: 'Loading gradients', subLabel: 'Refresh status once Discord’s appearance settings are ready.'
-                            })])
-                        )
-                    )
-                ] : []),
-                h(TableRadioGroup, { key: `base-${base}`, defaultValue: base, onChange: chooseBase },
-                    h(TableRowGroup, { title: 'Menu colors' },
-                        h(TableRadioRow, { label: 'Discord default',
-                            subLabel: 'Use your gradient’s original menu colors.', value: 'default' }),
-                        ...BASE_THEMES.map(t => h(TableRadioRow, { key: t.value, label: t.label, value: t.value }))
-                    )
+                ...(catalog.length ? [] : [h(TableRowGroup, { key: 'catalog-loading' },
+                    row('waiting', { label: 'Gradient list not ready',
+                        subLabel: 'Open Discord’s appearance settings, then return and tap Restore now to retry loading the gradient list.' })
+                )]),
+                h(TableRadioGroup, { key: `base-${base}`, title: 'Menu colors',
+                    description: 'Choose menu colors independently of your gradient.',
+                    defaultValue: base, onChange: chooseBase },
+                    h(TableRadioRow, { label: 'Discord default',
+                        subLabel: 'Use your gradient’s original menu colors.', value: 'default' }),
+                    ...BASE_THEMES.map(t => h(TableRadioRow, { key: t.value, label: t.label, value: t.value }))
                 ),
                 ...(message ? [h(TableRowGroup, { key: 'feedback' }, row('feedback', {
                     label: 'Menu colors', subLabel: message
@@ -88,6 +74,7 @@ export function SettingsComponent({ api }) {
                 ),
                 ...(showDetails ? [h(TableRowGroup, { key: 'details', title: 'Restoration details' },
                     row('recovery', { label: 'Status', subLabel: state?.status ?? 'Loading' }),
+                    ...(state?.detail?.reason ? [row('reason', { label: 'Restoration paused because', subLabel: state.detail.reason })] : []),
                     row('unlock', { label: 'Theme unlock', subLabel: state?.unlock?.ready ? 'Ready'
                         : state?.unlock?.missing.join(', ') ?? 'Loading' }),
                     ...(state?.error ? [row('error', { label: 'Last error', subLabel: state.error })] : []),

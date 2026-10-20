@@ -111,9 +111,17 @@ preview2 still require device confirmation.
 ## Native configurator (preview4)
 
 Uses the same Next Page, Design.Stack, TableRowGroup, TableRow and radio components
-as PalmDevs’ Fake Nitro. Gradient choices expand from a compact native row; menu
+as PalmDevs’ Fake Nitro. Gradient choices are visible immediately; menu
 bases use radio rows; restoration details are collapsed initially. No switches or
 platform-default buttons are used. The itsrumsey repository attribution remains
 at the bottom. This update changes the configurator only, not theme behavior.
 The compiled-bundle check renders the settings with mocked native components to
 verify imports and interaction wiring; it is not a physical-device screenshot test.
+
+Preview5 fixes radio-group nesting: TableRadioGroup owns its TableRowGroup and
+receives TableRadioRow children directly, matching Fake Nitro. The compiled UI
+check now rejects nested groups rather than only counting rows in a mock tree.
+Gradient options can be discovered independently of recovery session readiness;
+missing catalogs display guidance instead of a blank section. Paused restoration
+now exposes the actual cause under Details. No retry budgets or theme-writing
+behavior were changed. Classic files and URLs remain separate.

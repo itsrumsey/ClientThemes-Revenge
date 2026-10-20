@@ -48,3 +48,18 @@ test('unresolved theme tokens are diagnosed without applying or guessing replace
     const s = f.open(); assert.equal(s.read(0).known, false);
     assert.equal(s.supports(9000), false); f.close(s);
 });
+
+test('gradient options remain discoverable when recovery contracts are missing', async () => {
+    const { readCatalog } = await import('../plugins/client-themes/src/adapter.js');
+    const f = fixture();
+    delete f.modules[0].updateBackgroundGradientPreset;
+    assert.throws(f.open, /Missing Discord theme contracts/);
+    assert.deepEqual(readCatalog(f.metro), [{ id: 0, name: 'Mint' }, { id: 4, name: 'Preset 4' }]);
+    assert.equal(f.listeners.size, 0);
+    f.close();
+});
+
+test('unavailable gradient catalog returns no fabricated choices', async () => {
+    const { readCatalog } = await import('../plugins/client-themes/src/adapter.js');
+    assert.deepEqual(readCatalog({ findByProps() { throw Error('not loaded'); } }), []);
+});

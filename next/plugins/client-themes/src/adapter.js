@@ -86,3 +86,15 @@ export function createResolver({ metro, features, storage, onCatalog = () => {} 
         };
     };
 }
+
+// Picker discovery must not depend on the recovery session being ready.
+export function readCatalog(metro) {
+    try {
+        const presets = metro.findByProps('BACKGROUND_GRADIENT_PRESETS_MAP')?.BACKGROUND_GRADIENT_PRESETS_MAP;
+        return Object.values(presets ?? {}).filter(p => validId(p?.id) && Array.isArray(p.colors) && p.colors.length).map(p => {
+            let name;
+            try { name = p.getName?.(); } catch {}
+            return { id: p.id, name: typeof name === 'string' ? name : `Preset ${p.id}` };
+        });
+    } catch { return []; }
+}

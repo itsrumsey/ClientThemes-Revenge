@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 // ClientThemes by sapphire / aeongdesu; original m4fn3/FreeNitroTheme credit retained.
 import { createController } from './controller.js';
-import { createResolver } from './adapter.js';
+import { createResolver, readCatalog } from './adapter.js';
 import { createFeatures } from './features.js';
 import { createMetro, createPatcher, createStorage } from './next-api.js';
 import { applyBaseTheme } from './base-theme.js';
@@ -63,7 +63,7 @@ export function createRuntime(api, appState) {
             if (selected) controller.choose(selected.enabled ? selected.presetId : null);
             features?.refresh();
         },
-        inspect: () => ({ ...controller?.inspect(), unlock: features?.status(), catalog,
+        inspect: () => ({ ...controller?.inspect(), unlock: features?.status(), catalog: catalog.length ? catalog : readCatalog(metro),
             baseTheme: persistence?.storage.baseTheme ?? null,
             presetBase: metro.findByStoreName('ClientThemesBackgroundStore')?.gradientPreset?.theme,
             error }),

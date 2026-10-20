@@ -212,3 +212,11 @@ test('a matching restored gradient cannot report gradient-restored when entitlem
     assert.ok(f.events.some(([event]) => event === 'unlock-unavailable'));
     assert.equal(f.events.some(([event]) => event === 'gradient-restored'), false); f.control.stop();
 });
+
+test('suspended status exposes its cause to the configurator', async () => {
+    const f = fixture({ resolve() { throw Error('Missing test theme contract'); } });
+    f.control.start(); await f.clock.advance(120000);
+    assert.equal(f.control.inspect().status, 'suspended');
+    assert.match(f.control.inspect().detail.reason, /Missing test theme contract/);
+    f.control.stop();
+});
