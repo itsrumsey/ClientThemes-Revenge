@@ -21,17 +21,20 @@ Discord-private contracts are guarded but remain version dependent.
 
 ## Build and review
 
-Node 24 and Python 3:
+Node 24, Bun and Python 3:
 
 ```sh
-npm install --legacy-peer-deps
+npm install --ignore-scripts --legacy-peer-deps
 npm test
 npm run build
 node scripts/check-bundle.mjs
 python3 scripts/package.py
 ```
 
-The official Next plugin CLI produces the JavaScript. The packaging script writes
+The pinned official Next CLI source runs through Bun and produces the JavaScript.
+Installation skips lifecycle scripts because the upstream CLI’s npm preparation
+tries to compile before its API type peer is available. Platform-native SWC and
+Rolldown binaries are supplied by their optional packages. The packaging script writes
 `build/dist/itsrumsey.client-themes-next@0.1.0-preview1.zip`, with a format-1 manifest
 and `index.js` at the archive root, GPL license and corresponding plugin source.
 The review workflow uploads this artifact and does not publish Pages or a release.
