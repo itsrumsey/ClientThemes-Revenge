@@ -107,3 +107,13 @@ native picker descriptor and recovery base selection. The plugin ID stays unchan
 so updating preserves the saved gradient and base. The user confirmed cold-start
 persistence and base-menu selection on preview1; cross-lightness combinations in
 preview2 still require device confirmation.
+
+## Native configurator (preview4)
+
+Uses the same Next Page, Design.Stack, TableRowGroup, TableRow and radio components
+as PalmDevs’ Fake Nitro. Gradient choices expand from a compact native row; menu
+bases use radio rows; restoration details are collapsed initially. No switches or
+platform-default buttons are used. The itsrumsey repository attribution remains
+at the bottom. This update changes the configurator only, not theme behavior.
+The compiled-bundle check renders the settings with mocked native components to
+verify imports and interaction wiring; it is not a physical-device screenshot test.

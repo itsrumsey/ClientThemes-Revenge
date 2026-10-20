@@ -40,8 +40,8 @@ jobs:
           gh api repos/${{ github.repository }}/actions/artifacts/${{ steps.install.outputs.artifact-id }}/zip > build/downloaded-artifact.zip
           python3 -c "from scripts.package import validate_package; validate_package('build/downloaded-artifact.zip'); print('Downloaded ZIP has root manifest and script')"
 
-  publish-preview3:
-    if: github.event_name == 'push' && github.event.head_commit.message == 'Publish ClientThemes Next preview3 with repository attribution'
+  publish-preview4:
+    if: github.event_name == 'push' && github.event.head_commit.message == 'Publish ClientThemes Next preview4 with native settings UI'
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -63,13 +63,13 @@ jobs:
           sys.path.insert(0, 'next/scripts')
           from package import validate_package
           root = pathlib.Path('release/plugin')
-          target = pathlib.Path('release/ClientThemes-Next-0.1.0-preview3.zip')
+          target = pathlib.Path('release/ClientThemes-Next-0.1.0-preview4.zip')
           with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED) as archive:
               for path in sorted(root.rglob('*')):
                   if path.is_file():
                       archive.write(path, path.relative_to(root))
           manifest = validate_package(target)
-          assert manifest['version'] == '0.1.0-preview3'
+          assert manifest['version'] == '0.1.0-preview4'
           PY
       - name: Publish the requested public preview release
         env:
@@ -78,9 +78,9 @@ jobs:
           cat > release/notes.md <<'NOTES'
           ClientThemes Next with persistent gradients and independent Light, Ash, Dark and Onyx menu bases.
           
-          This build adds the itsrumsey repository link at the bottom of the configurator. Theme behavior is unchanged from preview2.
+          This build restyles the configurator using the same native Revenge Page, grouped table rows and radio components as Fake Nitro. It includes an expandable gradient chooser, all four menu bases, restoration actions, collapsed details and the itsrumsey repo link. Theme behavior is unchanged from preview3.
           
-          Download ClientThemes-Next-0.1.0-preview3.zip below and import it directly into Revenge Next. Update the existing plugin to preserve its settings.
+          Download ClientThemes-Next-0.1.0-preview4.zip below and import it directly into Revenge Next. Update the existing plugin to preserve its settings.
           
           This release is for Revenge Next. Revenge Classic plugin files and installation URLs are unchanged.
           
@@ -88,12 +88,12 @@ jobs:
           
           GPL-3.0. Credits: PalmDevs, sapphire / aeongdesu, and m4fn3 / FreeNitroTheme. Corresponding plugin source is included in the ZIP.
           NOTES
-          if ! gh release view next-v0.1.0-preview3 >/dev/null 2>&1; then
-            gh release create next-v0.1.0-preview3 release/ClientThemes-Next-0.1.0-preview3.zip --draft --prerelease --target "$RELEASE_TARGET" --title "ClientThemes Next 0.1.0-preview3" --notes-file release/notes.md
-            gh release edit next-v0.1.0-preview3 --draft=false
+          if ! gh release view next-v0.1.0-preview4 >/dev/null 2>&1; then
+            gh release create next-v0.1.0-preview4 release/ClientThemes-Next-0.1.0-preview4.zip --draft --prerelease --target "$RELEASE_TARGET" --title "ClientThemes Next 0.1.0-preview4" --notes-file release/notes.md
+            gh release edit next-v0.1.0-preview4 --draft=false
           fi
       - name: Verify anonymous download and ZIP integrity
         run: |
-          curl --fail --location --retry 5 --retry-all-errors --retry-delay 3 "https://github.com/${{ github.repository }}/releases/download/next-v0.1.0-preview3/ClientThemes-Next-0.1.0-preview3.zip" --output release/public-download.zip
-          cmp release/ClientThemes-Next-0.1.0-preview3.zip release/public-download.zip
+          curl --fail --location --retry 5 --retry-all-errors --retry-delay 3 "https://github.com/${{ github.repository }}/releases/download/next-v0.1.0-preview4/ClientThemes-Next-0.1.0-preview4.zip" --output release/public-download.zip
+          cmp release/ClientThemes-Next-0.1.0-preview4.zip release/public-download.zip
           python3 -c "import sys; sys.path.insert(0, 'next/scripts'); from package import validate_package; validate_package('release/public-download.zip')"
