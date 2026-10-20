@@ -28,11 +28,11 @@ test('native save captures user choice; low-level resets are not intent', () => 
 test('original sync initialization and guards are installed and removed once', () => {
     const f = fixture(), s = f.open(); assert.equal(f.listeners.size, 1);
     assert.equal(f.syncWrites, 1); assert.equal(f.modules[4].canUserUse('themes'), true);
-    f.modules[5].setShouldSyncAppearanceSettings(true); assert.equal(f.syncWrites, 1);
+    f.modules[5].setShouldSyncAppearanceSettings(true); assert.equal(f.syncWrites, 2, 'original sync setter still runs');
     f.close(s); f.close(s);
     assert.equal(f.patches, 0); assert.equal(f.listeners.size, 0);
     assert.equal(f.modules[4].canUserUse('themes'), false);
-    f.modules[5].setShouldSyncAppearanceSettings(true); assert.equal(f.syncWrites, 3, 'unload restores the readable sync preference');
+    f.modules[5].setShouldSyncAppearanceSettings(true); assert.equal(f.syncWrites, 4, 'unload restores the readable sync preference');
     f.modules[3].handleSaveTheme({ id: 4, type: 2 }); assert.equal(f.selections.length, 0);
 });
 test('feature patch failure is diagnosed without throwing away independent feature progress', () => {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-// Original sapphire/aeongdesu ClientThemes feature patches, independent of recovery.
+// sapphire/aeongdesu ClientThemes behavior adapted to Next, independent of recovery.
 import { validId } from './state.js';
 import { withBaseTheme } from './base-theme.js';
 
@@ -83,7 +83,8 @@ export function createFeatures({ metro, patcher, storage, selected, log = () => 
                     if (result && typeof result.then === 'function') Promise.resolve(result).then(restore, restore);
                     else restore();
                 });
-                disposers.push(patcher.instead('setShouldSyncAppearanceSettings', target, () => false));
+                // Preserve Discord's original side effects and return contract.
+                disposers.push(patcher.before('setShouldSyncAppearanceSettings', target, args => { args[0] = false; }));
             });
             attempt('experiment', () => {
                 const target = requireMethod(metro.findByStoreName('ExperimentStore'), 'getUserExperimentDescriptor');

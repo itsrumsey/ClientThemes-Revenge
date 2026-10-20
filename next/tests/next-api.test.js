@@ -85,6 +85,8 @@ test('stop during asynchronous storage load installs no patches or lifecycle lis
 
 test('Next unlock calls original and affects only CLIENT_THEMES; missing old experiment is optional', () => {
     const f = fixture(); let calls = 0;
+    const syncValues = [];
+    f.modules[5].setShouldSyncAppearanceSettings = value => { syncValues.push(value); return 'original-result'; };
     f.modules[4].canUserUse = function (product) { calls++; assert.equal(this, f.modules[4]); return product === 'owned'; };
     const features = createFeatures({ metro: f.metro, patcher: createPatcher(nextPatcher()), storage: {}, selected() {} });
     features.refresh();
@@ -93,7 +95,12 @@ test('Next unlock calls original and affects only CLIENT_THEMES; missing old exp
     assert.equal(f.modules[4].canUserUse('owned'), true);
     assert.equal(calls, 3);
     assert.equal(features.status().ready, true);
-    features.dispose(); f.close();
+    assert.equal(f.modules[5].setShouldSyncAppearanceSettings(true), 'original-result');
+    assert.deepEqual(syncValues, [false, false], 'sync stays off while original setter runs');
+    features.dispose();
+    f.modules[5].setShouldSyncAppearanceSettings(true);
+    assert.deepEqual(syncValues, [false, false, false, true]);
+    f.close();
 });
 
 test('Next native picker saves intent; recovery writes and low-level drift never replace it', () => {
