@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 import { createElement as h, useReducer, useState } from 'react';
-import { ScrollView, Text, Button, useColorScheme } from 'react-native';
+import { ScrollView, Text, Button, Linking, useColorScheme } from 'react-native';
 import { runtime } from './index.js';
 import { BASE_THEMES, label } from './base-theme.js';
 
@@ -28,6 +28,11 @@ export function SettingsComponent() {
             setMessage(runtime?.setBase(t.value) ?? 'Loading'); refresh();
         })),
         text('message', message),
-        text('limits', 'Preview: recovery checks gradient store state, not the colors painted on every screen. Recovery pauses in the background and stops after repeated failures. Reselect a preset or retry after resolving the cause.')
+        text('limits', 'Preview: recovery checks gradient store state, not the colors painted on every screen. Recovery pauses in the background and stops after repeated failures. Reselect a preset or retry after resolving the cause.'),
+        h(Text, { key: 'repository', selectable: true, accessibilityRole: 'link',
+            style: { color, fontSize: 12, opacity: 0.75 },
+            onPress: () => Linking.openURL('https://github.com/itsrumsey/ClientThemes-Revenge')
+                .catch(() => setMessage('Could not open the repository. You can copy the URL below.'))
+        }, 'By itsrumsey · https://github.com/itsrumsey/ClientThemes-Revenge')
     );
 }
