@@ -1,0 +1,29 @@
+name: Next ClientThemes review
+on:
+  push:
+    branches: [revenge-next-client-themes]
+    paths: ['next/**', '.github/workflows/next-preview.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: next
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --legacy-peer-deps
+      - run: npm test
+      - run: npm run build
+      - run: node scripts/check-bundle.mjs
+      - run: python3 scripts/package.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClientThemes-Next-review
+          path: next/build/dist/*.zip
+          if-no-files-found: error
